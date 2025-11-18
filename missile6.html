@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Missile Simulation</title>
+    <link rel="stylesheet" href="./missile6/style.css">
+    <script src="three.min.js"></script>
+</head>
+<body>
+    <div class="simulation-container">
+        <div class="controls-panel">
+            <div class="control-section">
+                <h3>Scenario</h3>
+                <select id="scenarioSelect" class="form-control">
+                    <option value="plains">Plains</option>
+                    <option value="mountains">Mountains</option>
+                    <option value="city">City</option>
+                    <option value="sea">Sea</option>
+                </select>
+            </div>
+            
+            <div class="control-section">
+                <h3>Missile Configuration</h3>
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select id="missileType" class="form-control">
+                        <option value="light">Light (500kg)</option>
+                        <option value="medium">Medium (1000kg)</option>
+                        <option value="heavy">Heavy (2000kg)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Warhead</label>
+                    <select id="warheadType" class="form-control">
+                        <option value="he">High Explosive</option>
+                        <option value="frag">Fragmentation</option>
+                        <option value="inc">Incendiary</option>
+                        <option value="nuke">Nuclear</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Size</label>
+                    <select id="warheadSize" class="form-control">
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                        <option value="xl">XL</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>Launch Parameters</h3>
+                <div class="form-group">
+                    <label class="form-label">Angle: <span id="angleValue">45</span>°</label>
+                    <input type="range" id="launchAngle" min="15" max="85" value="45" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Power: <span id="powerValue">50</span>%</label>
+                    <input type="range" id="launchPower" min="20" max="100" value="50" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Direction: <span id="directionValue">0</span>°</label>
+                    <input type="range" id="launchDirection" min="0" max="360" value="0" class="form-control">
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>Environment</h3>
+                <div class="form-group">
+                    <label class="form-label">Time</label>
+                    <select id="environment" class="form-control">
+                        <option value="day">Day</option>
+                        <option value="night">Night</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Control Mode</label>
+                    <select id="controlMode" class="form-control">
+                        <option value="manual">Manual</option>
+                        <option value="target">Target</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Camera</label>
+                    <select id="cameraMode" class="form-control">
+                        <option value="free">Free</option>
+                        <option value="follow">Follow</option>
+                        <option value="top">Top View</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <button id="launchBtn" class="btn btn--primary btn--full-width">Launch Missile</button>
+                <button id="resetBtn" class="btn btn--secondary btn--full-width">Reset Simulation</button>
+            </div>
+            
+            <div class="control-section">
+                <h3>Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Missiles Fired:</span>
+                        <span id="missilesFired" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Targets Hit:</span>
+                        <span id="targetsHit" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Accuracy:</span>
+                        <span id="accuracy" class="stat-value">0%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Destructions:</span>
+                        <span id="destructions" class="stat-value">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="simulation-area">
+            <div id="canvasContainer" class="canvas-container"></div>
+            
+            <div class="info-overlay">
+                <div id="crosshair" class="crosshair"></div>
+                <div id="targetIndicator" class="target-indicator hidden"></div>
+                <div class="info-panel">
+                    <div id="missionStatus" class="mission-status">Ready to Launch</div>
+                    <div id="coordinatesDisplay" class="coordinates">Target: None</div>
+                </div>
+            </div>
+            
+            <div id="missionLog" class="mission-log">
+                <h4>Mission Log</h4>
+                <div id="logEntries" class="log-entries">
+                    <div class="log-entry">Simulation initialized</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="./missile6/app.js"></script>
+</body>
+</html>

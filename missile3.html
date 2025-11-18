@@ -1,0 +1,2175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced 3D Missile Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container-fluid {
+            height: 100vh;
+            padding: 0;
+        }
+
+        .sidebar {
+            background: rgba(15, 20, 35, 0.98);
+            backdrop-filter: blur(10px);
+            border-right: 2px solid #4fc3f7;
+            box-shadow: 0 0 30px rgba(79, 195, 247, 0.3);
+            height: 100vh;
+            overflow-y: auto;
+            padding: 0;
+            width: 380px;
+            position: fixed;
+            z-index: 1000;
+        }
+
+        .scene-container {
+            margin-left: 380px;
+            height: 100vh;
+            position: relative;
+            background: #000;
+        }
+
+        .stats-panel {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 15px;
+            margin: 0;
+            border-radius: 0 0 15px 15px;
+            border-bottom: 3px solid #4fc3f7;
+            position: relative;
+        }
+
+        .stats-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #4fc3f7;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .stats-item {
+            padding: 4px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+        }
+
+        .minimize-btn {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            background: transparent;
+            border: 1px solid #4fc3f7;
+            color: #4fc3f7;
+            padding: 2px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .control-section {
+            padding: 20px;
+            color: white;
+        }
+
+        .section-title {
+            color: #4fc3f7;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .btn-group {
+            margin-bottom: 15px;
+            width: 100%;
+        }
+
+        .btn-group .btn {
+            font-size: 12px;
+            padding: 6px 12px;
+            border: 1px solid #4fc3f7;
+            background: transparent;
+            color: #4fc3f7;
+            margin: 0 2px;
+        }
+
+        .btn-group .btn.active {
+            background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .btn-group .btn:hover {
+            background: rgba(79, 195, 247, 0.2);
+        }
+
+        .slider-container {
+            margin-bottom: 15px;
+        }
+
+        .slider-container label {
+            color: #4fc3f7;
+            font-size: 14px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .slider-container input[type="range"] {
+            width: 100%;
+            background: #2a3f5f;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #4fc3f7;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(79, 195, 247, 0.8);
+        }
+
+        /* Moved mission log to viewport bottom-right so it's visible during flight */
+        .mission-log {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 320px;
+            max-height: 220px;
+            background: rgba(0,0,0,0.85);
+            border: 1px solid #4fc3f7;
+            border-radius: 8px;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            color: #00ff00;
+            z-index: 2000;
+        }
+
+        .mission-log-entry {
+            margin: 2px 0;
+            padding: 2px;
+        }
+
+        .target-marker {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, #ff0000, #ff6666);
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            transform: translate(-15px, -15px);
+            animation: pulse 1s infinite;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-15px, -15px) scale(1); }
+            50% { transform: translate(-15px, -15px) scale(1.2); }
+            100% { transform: translate(-15px, -15px) scale(1); }
+        }
+
+        .launch-btn {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            border: none;
+            color: white;
+            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 8px;
+            width: 48%;
+            margin: 2px 1%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .launch-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+        }
+
+        .reset-btn {
+            background: linear-gradient(135deg, #e53e3e, #c53030);
+            border: none;
+            color: white;
+            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 8px;
+            width: 48%;
+            margin: 2px 1%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(229, 62, 62, 0.4);
+        }
+
+        .mode-switch {
+            background: rgba(79, 195, 247, 0.1);
+            border: 1px solid #4fc3f7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .canvas-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* Prevent keyboard events from affecting sidebar */
+        .sidebar * {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .sidebar input[type="range"]:focus {
+            outline: none;
+        }
+
+        .sidebar button:focus {
+            outline: none;
+        }
+
+        /* Custom scrollbar */
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(79, 195, 247, 0.1);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #4fc3f7;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row h-100">
+            <div class="sidebar">
+                <!-- Stats Panel -->
+                <div class="stats-panel" id="statsPanel">
+                    <div class="stats-title">🚀 Mission Status</div>
+                    <button class="minimize-btn" onclick="toggleStats()">−</button>
+                    <div id="statsContent">
+                        <div class="stats-grid">
+                            <div class="stats-item">Status: <span id="status">Ready</span></div>
+                            <div class="stats-item">Altitude: <span id="altitude">0</span> m</div>
+                            <div class="stats-item">Velocity: <span id="velocity">0</span> m/s</div>
+                            <div class="stats-item">Distance: <span id="distance">0</span> m</div>
+                            <div class="stats-item">Time: <span id="time">0.0</span> s</div>
+                            <div class="stats-item">Weight: <span id="weightDisplay">1000</span> kg</div>
+                            <div class="stats-item">Angle: <span id="angleDisplay">45</span>°</div>
+                            <div class="stats-item">Max Alt: <span id="maxAlt">0</span> m</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Control Section -->
+                <div class="control-section">
+                    <!-- Scenario Selection -->
+                    <div class="section-title">Scenario</div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn active" onclick="setScenario('plains')">Plains</button>
+                        <button type="button" class="btn" onclick="setScenario('mountains')">Mountains</button>
+                        <button type="button" class="btn" onclick="setScenario('city')">City</button>
+                    </div>
+
+                    <!-- Environment -->
+                    <div class="section-title">Environment</div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn active" onclick="setTimeOfDay('day')">Day</button>
+                        <button type="button" class="btn" onclick="setTimeOfDay('night')">Night</button>
+                    </div>
+
+                    <!-- Mode Selection -->
+                    <div class="mode-switch">
+                        <div class="section-title">Control Mode</div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn active" onclick="setMode('manual')" id="manualBtn">Manual</button>
+                            <button type="button" class="btn" onclick="setMode('target')" id="targetBtn">Target</button>
+                        </div>
+                    </div>
+
+                    <!-- Manual Controls -->
+                    <div id="manualControls">
+                        <!-- Missile Type -->
+                        <div class="section-title">Missile Type</div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn active" onclick="setMissileType('light')">Light</button>
+                            <button type="button" class="btn" onclick="setMissileType('medium')">Medium</button>
+                            <button type="button" class="btn" onclick="setMissileType('heavy')">Heavy</button>
+                        </div>
+
+                        <!-- Launch Parameters -->
+                        <div class="slider-container">
+                            <label>Launch Angle: <span id="angleValue">45</span>°</label>
+                            <input type="range" id="angleSlider" min="1" max="179" value="45" oninput="updateAngle(this.value)">
+                        </div>
+
+                        <div class="slider-container">
+                            <label>Velocity: <span id="velocityValue">150</span> m/s</label>
+                            <input type="range" id="velocitySlider" min="50" max="500" value="150" oninput="updateVelocity(this.value)">
+                        </div>
+
+                        <div class="slider-container">
+                            <label>Weight: <span id="weightValue">1000</span> kg</label>
+                            <input type="range" id="weightSlider" min="500" max="8000" value="1000" oninput="updateWeight(this.value)">
+                        </div>
+
+                        <!-- Warhead Type -->
+                        <div class="section-title">Warhead Type</div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn active" onclick="setWarheadType('HE')">HE</button>
+                            <button type="button" class="btn" onclick="setWarheadType('fragmentation')">Frag</button>
+                            <button type="button" class="btn" onclick="setWarheadType('incendiary')">Inc</button>
+                            <button type="button" class="btn" onclick="setWarheadType('nuclear')">Nuke</button>
+                        </div>
+
+                        <!-- Warhead Size -->
+                        <div class="section-title">Warhead Size</div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn active" onclick="setWarheadSize('small')">Small</button>
+                            <button type="button" class="btn" onclick="setWarheadSize('medium')">Medium</button>
+                            <button type="button" class="btn" onclick="setWarheadSize('large')">Large</button>
+                            <button type="button" class="btn" onclick="setWarheadSize('xl')">XL</button>
+                        </div>
+                    </div>
+
+                    <!-- Target Controls -->
+                    <div id="targetControls" style="display: none;">
+                        <div class="section-title">Target Mode</div>
+                        <p style="color: #4fc3f7; font-size: 14px;">Click on the terrain to set target location</p>
+                        <div class="stats-grid">
+                            <div class="stats-item">Target X: <span id="targetX">0</span></div>
+                            <div class="stats-item">Target Z: <span id="targetZ">0</span></div>
+                            <div class="stats-item">Calc Angle: <span id="calcAngle">--</span>°</div>
+                            <div class="stats-item">Calc Velocity: <span id="calcVelocity">--</span> m/s</div>
+                        </div>
+                    </div>
+
+                    <!-- Camera Controls -->
+                    <div class="section-title">Camera Mode</div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn active" onclick="setCameraMode('free')">Free</button>
+                        <button type="button" class="btn" onclick="setCameraMode('follow')">Follow</button>
+                        <button type="button" class="btn" onclick="setCameraMode('top')">Top</button>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="margin-top: 20px;">
+                        <button class="launch-btn" onclick="launchMissile()">LAUNCH MISSILE</button>
+                        <button class="reset-btn" onclick="resetSimulation()">RESET</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scene-container">
+                <div class="canvas-container" id="canvasContainer"></div>
+                <div id="targetMarker" class="target-marker" style="display: none;"></div>
+
+                <!-- Mission log (required by JS) -->
+                <div id="missionLog" class="mission-log">
+                    <div class="mission-log-entry">System initialized - Ready for launch</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let scene, camera, renderer, controls;
+        let prevAltitude = 0;
+        let altitudeWasIncreasing = false;
+        let peakLogged = false;
+        let missile, ground, launchPad;
+        let isLaunching = false, isFlying = false;
+        let launchTime = 0;
+        let missionStartTime = 0;
+        let maxAltitudeReached = 0;
+        let maxVelocityReached = 0;
+        let maxVelocityTime = 0;
+        let maxAltitudeTime = 0;
+
+        // Simulation parameters
+        let currentScenario = 'plains';
+        let currentMode = 'manual';
+        let currentMissileType = 'light';
+        let currentWarheadType = 'HE';
+        let currentWarheadSize = 'small';
+        let currentTimeOfDay = 'day';
+        let currentCameraMode = 'free';
+        let targetMode = false;
+        let targetPosition = { x: 0, z: 0 };
+        let statsMinimized = false;
+
+        // Missile physics
+        let missileParams = {
+            angle: 45,
+            velocity: 150,
+            weight: 1000,
+            position: new THREE.Vector3(0, 2, 0),
+            velocity3d: new THREE.Vector3(0, 0, 0),
+            gravity: 9.81,
+            airDensity: 1.225
+        };
+
+        // Missile types configuration
+        const missileTypes = {
+            light: { 
+                weightRange: [500, 1500], 
+                color: 0x4CAF50, 
+                flameSize: 0.8,
+                trailIntensity: 1.0 
+            },
+            medium: { 
+                weightRange: [1500, 3500], 
+                color: 0xFF9800,
+                flameSize: 1.2,
+                trailIntensity: 1.5 
+            },
+            heavy: { 
+                weightRange: [3500, 8000], 
+                color: 0xF44336,
+                flameSize: 1.8,
+                trailIntensity: 2.0 
+            }
+        };
+
+        // Warhead configurations
+        const warheadTypes = {
+            HE: { explosionSize: 1.0, particleCount: 100, color: 0xFF6600 },
+            fragmentation: { explosionSize: 0.8, particleCount: 200, color: 0xFFFFFF },
+            incendiary: { explosionSize: 1.2, particleCount: 150, color: 0xFF0000 },
+            nuclear: { explosionSize: 3.0, particleCount: 500, color: 0x323232 }
+        };
+
+        const warheadSizes = {
+            small: { sizeMultiplier: 0.5, damageRadius: 10 },
+            medium: { sizeMultiplier: 1.0, damageRadius: 25 },
+            large: { sizeMultiplier: 2.0, damageRadius: 50 },
+            xl: { sizeMultiplier: 4.0, damageRadius: 100 }
+        };
+
+        // Particles and effects
+        let smokeParticles = [];
+        let explosionParticles = [];
+        let launchFlames = [];
+        let vehicles = [];
+        let buildings = [];
+        let trees = [];
+        let mountains = [];
+
+        // Initialize the simulation
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, getViewportAspect(), 0.1, 10000);
+            camera.position.set(100, 50, 100);
+            camera.lookAt(0, 0, 0);
+
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(getViewportWidth(), getViewportHeight());
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.setClearColor(0x87CEEB);
+            
+            document.getElementById('canvasContainer').appendChild(renderer.domElement);
+
+            // Create controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 10;
+            controls.maxDistance = 2000;
+
+            // Prevent controls from interfering with sidebar
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+            });
+            renderer.domElement.addEventListener('mouseup', (e) => {
+                e.stopPropagation();
+            });
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                e.stopPropagation();
+            });
+
+            // Add click handler for target mode
+            renderer.domElement.addEventListener('click', onCanvasClick);
+
+            // Lighting
+            setupLighting();
+
+            // Create environment
+            createEnvironment();
+
+            // Create missile
+            createMissile();
+
+            // Add keyboard controls (prevent sidebar interference)
+            setupKeyboardControls();
+
+            // Start animation loop
+            animate();
+
+            // Add window resize handler
+            window.addEventListener('resize', onWindowResize);
+
+            addMissionLogEntry("System initialized - Ready for launch");
+        }
+
+        function getViewportWidth() {
+            return window.innerWidth - 380;
+        }
+
+        function getViewportHeight() {
+            return window.innerHeight;
+        }
+
+        function getViewportAspect() {
+            return getViewportWidth() / getViewportHeight();
+        }
+
+        function setupLighting() {
+            // Clear existing lights
+            scene.children = scene.children.filter(child => !(child instanceof THREE.Light));
+
+            if (currentTimeOfDay === 'day') {
+                // Day lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+                directionalLight.position.set(1000, 2000, 1000);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                directionalLight.shadow.camera.near = 0.5;
+                directionalLight.shadow.camera.far = 5000;
+                directionalLight.shadow.camera.left = -2000;
+                directionalLight.shadow.camera.right = 2000;
+                directionalLight.shadow.camera.top = 2000;
+                directionalLight.shadow.camera.bottom = -2000;
+                scene.add(directionalLight);
+
+                scene.background = new THREE.Color(0x87CEEB);
+                scene.fog = new THREE.Fog(0x87CEEB, 1000, 8000);
+            } else {
+                // Night lighting
+                const ambientLight = new THREE.AmbientLight(0x1a1a2e, 0.3);
+                scene.add(ambientLight);
+
+                const moonLight = new THREE.DirectionalLight(0x6666ff, 0.5);
+                moonLight.position.set(-1000, 2000, 1000);
+                moonLight.castShadow = true;
+                moonLight.shadow.mapSize.width = 2048;
+                moonLight.shadow.mapSize.height = 2048;
+                scene.add(moonLight);
+
+                scene.background = new THREE.Color(0x0a0a0a);
+                scene.fog = new THREE.Fog(0x0a0a0a, 500, 5000);
+            }
+        }
+
+        function createEnvironment() {
+            // Clear existing environment
+            scene.children = scene.children.filter(child => 
+                !(child.userData && (child.userData.isEnvironment || child.userData.isVehicle))
+            );
+
+            // Create massive ground (10km x 10km)
+            // lower subdivision to reduce raycast & update cost
+            const groundGeometry = new THREE.PlaneGeometry(10000, 10000, 120, 120);
+            const groundMaterial = new THREE.MeshLambertMaterial({ 
+                color: getGroundColor(),
+                transparent: false
+            });
+            
+            if (ground) scene.remove(ground);
+            ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            ground.userData.isEnvironment = true;
+            scene.add(ground);
+
+            // Modify terrain based on scenario
+            if (currentScenario === 'mountains') {
+                createMountainTerrain();
+            }
+
+            // Create launch pad
+            createLaunchPad();
+
+            // Populate environment
+            switch (currentScenario) {
+                case 'plains':
+                    createPlainsEnvironment();
+                    break;
+                case 'mountains':
+                    createMountainsEnvironment();
+                    break;
+                case 'city':
+                    createCityEnvironment();
+                    break;
+            }
+
+            // vehicles are created inside createCityEnvironment only
+        }
+
+        function getGroundColor() {
+            switch (currentScenario) {
+                case 'plains': return 0x4CAF50;
+                case 'mountains': return 0x8D6E63;
+                case 'city': return 0x607D8B;
+                default: return 0x4CAF50;
+            }
+        }
+
+        function createMountainTerrain() {
+            const vertices = ground.geometry.attributes.position.array;
+            for (let i = 0; i < vertices.length; i += 3) {
+                const x = vertices[i];
+                const z = vertices[i + 2];
+                // Create realistic mountain heights using Perlin noise simulation
+                const height = Math.sin(x * 0.0008) * Math.cos(z * 0.0008) * 200 +
+                              Math.sin(x * 0.002) * Math.cos(z * 0.002) * 100 +
+                              Math.sin(x * 0.005) * Math.cos(z * 0.005) * 50 +
+                              Math.random() * 30;
+                vertices[i + 1] = Math.max(0, height);
+            }
+            ground.geometry.attributes.position.needsUpdate = true;
+            ground.geometry.computeVertexNormals();
+        }
+
+        function createLaunchPad() {
+            // Launch platform
+            const platformGeometry = new THREE.CylinderGeometry(15, 20, 3, 32);
+            const platformMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
+            if (launchPad) scene.remove(launchPad);
+            launchPad = new THREE.Mesh(platformGeometry, platformMaterial);
+            launchPad.position.set(0, 1.5, 0);
+            launchPad.castShadow = true;
+            launchPad.receiveShadow = true;
+            launchPad.userData.isEnvironment = true;
+            scene.add(launchPad);
+
+            // Launch tower
+            const towerGeometry = new THREE.BoxGeometry(2, 30, 2);
+            const towerMaterial = new THREE.MeshLambertMaterial({ color: 0x888888 });
+            const tower = new THREE.Mesh(towerGeometry, towerMaterial);
+            tower.position.set(12, 15, 0);
+            tower.castShadow = true;
+            tower.userData.isEnvironment = true;
+            scene.add(tower);
+
+            // Support structures
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const supportGeometry = new THREE.CylinderGeometry(0.5, 1, 20, 8);
+                const supportMaterial = new THREE.MeshLambertMaterial({ color: 0x777777 });
+                const support = new THREE.Mesh(supportGeometry, supportMaterial);
+                support.position.set(
+                    Math.cos(angle) * 18,
+                    10,
+                    Math.sin(angle) * 18
+                );
+                support.castShadow = true;
+                support.userData.isEnvironment = true;
+                scene.add(support);
+            }
+        }
+
+        function createPlainsEnvironment() {
+            // Create diverse trees with variety
+            for (let i = 0; i < 200; i++) {
+                createVariedTree();
+            }
+
+            // Create rolling hills
+            for (let i = 0; i < 20; i++) {
+                createVariedHill();
+            }
+
+            // Create scattered rocks
+            for (let i = 0; i < 80; i++) {
+                createRock();
+            }
+        }
+
+        function createMountainsEnvironment() {
+            // Create mountain peaks throughout the terrain
+            for (let i = 0; i < 40; i++) {
+                createMountainPeak();
+            }
+
+            // Mountain trees (different types)
+            for (let i = 0; i < 100; i++) {
+                createMountainTree();
+            }
+
+            // Rocky outcrops
+            for (let i = 0; i < 60; i++) {
+                createRockyOutcrop();
+            }
+
+            // Snow patches on high peaks
+            createSnowPatches();
+        }
+
+        function createCityEnvironment() {
+            // Create a compact city with fewer procedurally placed blocks to reduce load time
+            createCityBlocks();
+            createSkyscrapers();
+            createStreets();
+            createCityLights();
+
+            // Only create vehicles when in city scenario
+            createVehicles();
+        }
+
+        function createVariedTree() {
+            const treeGroup = new THREE.Group();
+            
+            // Varied trunk dimensions
+            const trunkHeight = 8 + Math.random() * 15;
+            const trunkRadius = 0.5 + Math.random() * 1.0;
+            const trunkGeometry = new THREE.CylinderGeometry(
+                trunkRadius * 0.8, 
+                trunkRadius, 
+                trunkHeight, 
+                8
+            );
+            
+            // Varied trunk colors
+            const trunkColors = [0x8B4513, 0x654321, 0x4A4A4A, 0x6B4423];
+            const trunkMaterial = new THREE.MeshLambertMaterial({ 
+                color: trunkColors[Math.floor(Math.random() * trunkColors.length)]
+            });
+            
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = trunkHeight / 2;
+            trunk.castShadow = true;
+            treeGroup.add(trunk);
+
+            // Varied foliage
+            const foliageSize = 4 + Math.random() * 8;
+            const foliageType = Math.random();
+            
+            let foliage;
+            if (foliageType < 0.4) {
+                // Spherical foliage
+                const foliageGeometry = new THREE.SphereGeometry(foliageSize, 12, 12);
+                foliage = new THREE.Mesh(foliageGeometry, new THREE.MeshLambertMaterial({ 
+                    color: new THREE.Color().setHSL(0.25 + Math.random() * 0.15, 0.7, 0.3 + Math.random() * 0.3)
+                }));
+            } else if (foliageType < 0.8) {
+                // Conical foliage (pine-like)
+                const foliageGeometry = new THREE.ConeGeometry(foliageSize, foliageSize * 1.5, 8);
+                foliage = new THREE.Mesh(foliageGeometry, new THREE.MeshLambertMaterial({ 
+                    color: new THREE.Color().setHSL(0.35, 0.8, 0.2 + Math.random() * 0.3)
+                }));
+            } else {
+                // Cylindrical foliage
+                const foliageGeometry = new THREE.CylinderGeometry(foliageSize, foliageSize * 0.8, foliageSize, 12);
+                foliage = new THREE.Mesh(foliageGeometry, new THREE.MeshLambertMaterial({ 
+                    color: new THREE.Color().setHSL(0.3, 0.6, 0.3 + Math.random() * 0.3)
+                }));
+            }
+            
+            foliage.position.y = trunkHeight + foliageSize * 0.3;
+            foliage.castShadow = true;
+            treeGroup.add(foliage);
+
+            // Position randomly but away from launch area
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 100 + Math.random() * 4000;
+            treeGroup.position.set(
+                Math.cos(angle) * distance,
+                0,
+                Math.sin(angle) * distance
+            );
+            
+            treeGroup.userData.isEnvironment = true;
+            scene.add(treeGroup);
+        }
+
+        function createVariedHill() {
+            const hillSize = 20 + Math.random() * 80;
+            const hillHeight = hillSize * (0.5 + Math.random() * 1.0);
+            
+            // Different hill shapes
+            const hillType = Math.random();
+            let hillGeometry;
+            
+            if (hillType < 0.5) {
+                hillGeometry = new THREE.ConeGeometry(hillSize, hillHeight, 16);
+            } else {
+                hillGeometry = new THREE.SphereGeometry(hillSize, 16, 12);
+                hillGeometry.scale(1, 0.4, 1);
+            }
+            
+            const hillMaterial = new THREE.MeshLambertMaterial({ 
+                color: new THREE.Color().setHSL(0.25, 0.4, 0.3 + Math.random() * 0.4)
+            });
+            
+            const hill = new THREE.Mesh(hillGeometry, hillMaterial);
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 200 + Math.random() * 3000;
+            hill.position.set(
+                Math.cos(angle) * distance,
+                hillHeight * 0.3,
+                Math.sin(angle) * distance
+            );
+            hill.castShadow = true;
+            hill.receiveShadow = true;
+            hill.userData.isEnvironment = true;
+            scene.add(hill);
+        }
+
+        function createRock() {
+            const rockSize = 2 + Math.random() * 8;
+            const rockGeometry = new THREE.DodecahedronGeometry(rockSize, 0);
+            const rockMaterial = new THREE.MeshLambertMaterial({ 
+                color: new THREE.Color().setHSL(0, 0, 0.3 + Math.random() * 0.4)
+            });
+            
+            const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 50 + Math.random() * 4500;
+            rock.position.set(
+                Math.cos(angle) * distance,
+                rockSize / 2,
+                Math.sin(angle) * distance
+            );
+            rock.rotation.x = Math.random() * Math.PI;
+            rock.rotation.y = Math.random() * Math.PI;
+            rock.rotation.z = Math.random() * Math.PI;
+            rock.castShadow = true;
+            rock.userData.isEnvironment = true;
+            scene.add(rock);
+        }
+
+        function createMountainPeak() {
+            const peakHeight = 100 + Math.random() * 300;
+            const peakRadius = 30 + Math.random() * 70;
+            
+            const peakGeometry = new THREE.ConeGeometry(peakRadius, peakHeight, 16);
+            const peakMaterial = new THREE.MeshLambertMaterial({ 
+                color: new THREE.Color().setHSL(0.1, 0.3, 0.4 + Math.random() * 0.3)
+            });
+            
+            const peak = new THREE.Mesh(peakGeometry, peakMaterial);
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 200 + Math.random() * 4000;
+            peak.position.set(
+                Math.cos(angle) * distance,
+                peakHeight / 2,
+                Math.sin(angle) * distance
+            );
+            peak.castShadow = true;
+            peak.receiveShadow = true;
+            peak.userData.isEnvironment = true;
+            scene.add(peak);
+        }
+
+        function createMountainTree() {
+            // Pine-like trees for mountains
+            const treeGroup = new THREE.Group();
+            
+            const trunkHeight = 6 + Math.random() * 12;
+            const trunkGeometry = new THREE.CylinderGeometry(0.4, 0.6, trunkHeight, 8);
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x4A3729 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = trunkHeight / 2;
+            trunk.castShadow = true;
+            treeGroup.add(trunk);
+
+            // Multiple cone layers for pine effect
+            for (let i = 0; i < 3 + Math.floor(Math.random() * 3); i++) {
+                const coneSize = (3 + Math.random() * 4) * (1 - i * 0.2);
+                const coneHeight = (4 + Math.random() * 4) * (1 - i * 0.15);
+                const coneGeometry = new THREE.ConeGeometry(coneSize, coneHeight, 8);
+                const coneMaterial = new THREE.MeshLambertMaterial({ 
+                    color: new THREE.Color().setHSL(0.35, 0.8, 0.15 + Math.random() * 0.2)
+                });
+                const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+                cone.position.y = trunkHeight + i * coneHeight * 0.7;
+                cone.castShadow = true;
+                treeGroup.add(cone);
+            }
+
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 150 + Math.random() * 4000;
+            treeGroup.position.set(
+                Math.cos(angle) * distance,
+                0,
+                Math.sin(angle) * distance
+            );
+            treeGroup.userData.isEnvironment = true;
+            scene.add(treeGroup);
+        }
+
+        function createRockyOutcrop() {
+            const outcropGroup = new THREE.Group();
+            
+            for (let i = 0; i < 3 + Math.random() * 5; i++) {
+                const rockSize = 5 + Math.random() * 15;
+                const rockGeometry = new THREE.DodecahedronGeometry(rockSize, 1);
+                const rockMaterial = new THREE.MeshLambertMaterial({ 
+                    color: new THREE.Color().setHSL(0.1, 0.2, 0.3 + Math.random() * 0.3)
+                });
+                const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+                rock.position.set(
+                    (Math.random() - 0.5) * 30,
+                    rockSize / 2,
+                    (Math.random() - 0.5) * 30
+                );
+                rock.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                rock.castShadow = true;
+                outcropGroup.add(rock);
+            }
+
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 100 + Math.random() * 4000;
+            outcropGroup.position.set(
+                Math.cos(angle) * distance,
+                0,
+                Math.sin(angle) * distance
+            );
+            outcropGroup.userData.isEnvironment = true;
+            scene.add(outcropGroup);
+        }
+
+        function createSnowPatches() {
+            for (let i = 0; i < 30; i++) {
+                const snowGeometry = new THREE.SphereGeometry(10 + Math.random() * 20, 12, 8);
+                snowGeometry.scale(1, 0.2, 1);
+                const snowMaterial = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+                const snow = new THREE.Mesh(snowGeometry, snowMaterial);
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 200 + Math.random() * 3000;
+                snow.position.set(
+                    Math.cos(angle) * distance,
+                    50 + Math.random() * 100,
+                    Math.sin(angle) * distance
+                );
+                snow.userData.isEnvironment = true;
+                scene.add(snow);
+            }
+        }
+
+        function createCityBlocks() {
+            // Generate a limited number of blocks placed randomly (faster than full grid)
+            const cityRadius = 2000;
+            const numBlocks = 300; // reduced block count for performance
+            const blockSize = 120;
+
+            for (let i = 0; i < numBlocks; i++) {
+                const x = Math.floor((Math.random() - 0.5) * 2 * cityRadius);
+                const z = Math.floor((Math.random() - 0.5) * 2 * cityRadius);
+                if (Math.abs(x) < 250 && Math.abs(z) < 250) continue; // skip launch area
+                createCityBlock(x, z, blockSize);
+            }
+        }
+
+        function createCityBlock(x, z, size) {
+            // Create 4-8 buildings per block with variety
+            const numBuildings = 4 + Math.floor(Math.random() * 5);
+            
+            for (let i = 0; i < numBuildings; i++) {
+                const buildingWidth = 15 + Math.random() * 25;
+                const buildingDepth = 15 + Math.random() * 25;
+                const buildingHeight = 20 + Math.random() * 150;
+                
+                // Building type variety
+                let buildingGeometry;
+                const buildingType = Math.random();
+                
+                if (buildingType < 0.6) {
+                    // Regular box building
+                    buildingGeometry = new THREE.BoxGeometry(buildingWidth, buildingHeight, buildingDepth);
+                } else if (buildingType < 0.8) {
+                    // Cylindrical building
+                    buildingGeometry = new THREE.CylinderGeometry(buildingWidth/2, buildingWidth/2, buildingHeight, 12);
+                } else {
+                    // Pyramid building
+                    buildingGeometry = new THREE.ConeGeometry(buildingWidth/2, buildingHeight, 8);
+                }
+                
+                // Varied building colors and materials
+                const buildingColors = [
+                    0x808080, 0x606060, 0x404040, 0x505050,
+                    0x708090, 0x556B2F, 0x8B4513, 0x2F4F4F
+                ];
+                
+                const buildingMaterial = new THREE.MeshLambertMaterial({ 
+                    color: buildingColors[Math.floor(Math.random() * buildingColors.length)]
+                });
+                
+                const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+                building.position.set(
+                    x + (Math.random() - 0.5) * size * 0.8,
+                    buildingHeight / 2,
+                    z + (Math.random() - 0.5) * size * 0.8
+                );
+                building.castShadow = true;
+                building.receiveShadow = true;
+                building.userData.isEnvironment = true;
+                scene.add(building);
+
+                // Add building lights for night mode
+                if (currentTimeOfDay === 'night') {
+                    addBuildingLights(building);
+                }
+            }
+        }
+
+        function createSkyscrapers() {
+            // Create some impressive skyscrapers
+            for (let i = 0; i < 20; i++) {
+                const skyscraperWidth = 30 + Math.random() * 40;
+                const skyscraperHeight = 200 + Math.random() * 400;
+                const skyscraperDepth = 30 + Math.random() * 40;
+                
+                const skyscraperGeometry = new THREE.BoxGeometry(skyscraperWidth, skyscraperHeight, skyscraperDepth);
+                const skyscraperMaterial = new THREE.MeshLambertMaterial({ 
+                    color: new THREE.Color().setHSL(0.6, 0.2, 0.3 + Math.random() * 0.4)
+                });
+                
+                const skyscraper = new THREE.Mesh(skyscraperGeometry, skyscraperMaterial);
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 500 + Math.random() * 1500;
+                skyscraper.position.set(
+                    Math.cos(angle) * distance,
+                    skyscraperHeight / 2,
+                    Math.sin(angle) * distance
+                );
+                skyscraper.castShadow = true;
+                skyscraper.receiveShadow = true;
+                skyscraper.userData.isEnvironment = true;
+                scene.add(skyscraper);
+
+                if (currentTimeOfDay === 'night') {
+                    addBuildingLights(skyscraper);
+                }
+            }
+        }
+
+        function createStreets() {
+            // Create street network
+            const streetWidth = 8;
+            const streetMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+            
+            // Main streets
+            for (let i = -2000; i <= 2000; i += 200) {
+                // Horizontal streets
+                const streetGeometry = new THREE.PlaneGeometry(4000, streetWidth);
+                const street = new THREE.Mesh(streetGeometry, streetMaterial);
+                street.rotation.x = -Math.PI / 2;
+                street.position.set(0, 0.1, i);
+                street.userData.isEnvironment = true;
+                scene.add(street);
+                
+                // Vertical streets
+                const streetGeometry2 = new THREE.PlaneGeometry(streetWidth, 4000);
+                const street2 = new THREE.Mesh(streetGeometry2, streetMaterial);
+                street2.rotation.x = -Math.PI / 2;
+                street2.position.set(i, 0.1, 0);
+                street2.userData.isEnvironment = true;
+                scene.add(street2);
+            }
+        }
+
+        function createCityLights() {
+            if (currentTimeOfDay === 'night') {
+                // Street lights
+                for (let i = -2000; i <= 2000; i += 100) {
+                    for (let j = -2000; j <= 2000; j += 100) {
+                        if (Math.abs(i) < 100 && Math.abs(j) < 100) continue;
+                        
+                        const lightGeometry = new THREE.SphereGeometry(2, 8, 8);
+                        const lightMaterial = new THREE.MeshBasicMaterial({ 
+                            color: 0xFFFF88,
+                            emissive: 0xFFFF88
+                        });
+                        const streetLight = new THREE.Mesh(lightGeometry, lightMaterial);
+                        streetLight.position.set(i, 15, j);
+                        streetLight.userData.isEnvironment = true;
+                        scene.add(streetLight);
+
+                        // Add point light
+                        const pointLight = new THREE.PointLight(0xFFFF88, 0.5, 50);
+                        pointLight.position.set(i, 15, j);
+                        scene.add(pointLight);
+                    }
+                }
+            }
+        }
+
+        function addBuildingLights(building) {
+            // Add random window lights
+            const numLights = 5 + Math.floor(Math.random() * 15);
+            for (let i = 0; i < numLights; i++) {
+                const lightGeometry = new THREE.PlaneGeometry(2, 2);
+                const lightMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xFFFF00,
+                    emissive: 0xFFFF00,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const windowLight = new THREE.Mesh(lightGeometry, lightMaterial);
+                windowLight.position.set(
+                    building.position.x + (Math.random() - 0.5) * building.geometry.parameters.width * 0.8,
+                    building.position.y + (Math.random() - 0.5) * building.geometry.parameters.height * 0.8,
+                    building.position.z + building.geometry.parameters.depth / 2 + 0.1
+                );
+                windowLight.userData.isEnvironment = true;
+                scene.add(windowLight);
+            }
+        }
+
+        function createVehicles() {
+            // vehicles only used in cities; clear and create a reasonable number
+            vehicles = [];
+            const numVehicles = 80; // reduced
+            for (let i = 0; i < numVehicles; i++) {
+                createMovingVehicle(true); // indicate city placement
+            }
+        }
+
+        function createMovingVehicle() {
+            const vehicleGroup = new THREE.Group();
+            
+            // Vehicle body with variety
+            const vehicleTypes = ['car', 'truck', 'bus'];
+            const vehicleType = vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)];
+            
+            let bodyGeometry, bodySize;
+            switch (vehicleType) {
+                case 'car':
+                    bodySize = { width: 4, height: 2, depth: 8 };
+                    bodyGeometry = new THREE.BoxGeometry(bodySize.width, bodySize.height, bodySize.depth);
+                    break;
+                case 'truck':
+                    bodySize = { width: 6, height: 4, depth: 12 };
+                    bodyGeometry = new THREE.BoxGeometry(bodySize.width, bodySize.height, bodySize.depth);
+                    break;
+                case 'bus':
+                    bodySize = { width: 5, height: 3, depth: 15 };
+                    bodyGeometry = new THREE.BoxGeometry(bodySize.width, bodySize.height, bodySize.depth);
+                    break;
+            }
+            
+            const vehicleColors = [0xFF0000, 0x0000FF, 0x00FF00, 0xFFFF00, 0xFF00FF, 0x00FFFF, 0xFFFFFF, 0x808080];
+            const bodyMaterial = new THREE.MeshLambertMaterial({ 
+                color: vehicleColors[Math.floor(Math.random() * vehicleColors.length)]
+            });
+            
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = bodySize.height / 2;
+            body.castShadow = true;
+            vehicleGroup.add(body);
+
+            // Wheels
+            const wheelGeometry = new THREE.CylinderGeometry(1, 1, 0.5, 8);
+            const wheelMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+            
+            const wheelPositions = [
+                [-bodySize.width/2 - 0.3, 0, bodySize.depth/3],
+                [bodySize.width/2 + 0.3, 0, bodySize.depth/3],
+                [-bodySize.width/2 - 0.3, 0, -bodySize.depth/3],
+                [bodySize.width/2 + 0.3, 0, -bodySize.depth/3]
+            ];
+            
+            wheelPositions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.position.set(pos[0], pos[1], pos[2]);
+                wheel.rotation.z = Math.PI / 2;
+                vehicleGroup.add(wheel);
+            });
+
+            // Headlights for night mode
+            if (currentTimeOfDay === 'night') {
+                const headlightGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+                const headlightMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xFFFFFF,
+                    emissive: 0xFFFFFF
+                });
+                
+                const leftHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+                leftHeadlight.position.set(-bodySize.width/3, bodySize.height/2, bodySize.depth/2 + 0.5);
+                vehicleGroup.add(leftHeadlight);
+                
+                const rightHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+                rightHeadlight.position.set(bodySize.width/3, bodySize.height/2, bodySize.depth/2 + 0.5);
+                vehicleGroup.add(rightHeadlight);
+
+                // Add point lights for headlight effect
+                const leftLight = new THREE.PointLight(0xFFFFFF, 0.5, 30);
+                leftLight.position.copy(leftHeadlight.position);
+                vehicleGroup.add(leftLight);
+                
+                const rightLight = new THREE.PointLight(0xFFFFFF, 0.5, 30);
+                rightLight.position.copy(rightHeadlight.position);
+                vehicleGroup.add(rightLight);
+            }
+
+            // Random starting position. If in city, bias towards city center area
+            let angle = Math.random() * Math.PI * 2;
+            let distance = 200 + Math.random() * 1200;
+            vehicleGroup.position.set(
+                Math.cos(angle) * distance,
+                0,
+                Math.sin(angle) * distance
+            );
+
+            // Movement properties
+            vehicleGroup.userData.isVehicle = true;
+            vehicleGroup.userData.speed = 0.5 + Math.random() * 2.0;
+            vehicleGroup.userData.direction = Math.random() * Math.PI * 2;
+            vehicleGroup.userData.type = vehicleType;
+            
+            scene.add(vehicleGroup);
+            vehicles.push(vehicleGroup);
+        }
+
+        function createMissile() {
+            const missileGroup = new THREE.Group();
+            
+            // Main body
+            const bodyGeometry = new THREE.CylinderGeometry(1, 1.5, 12, 16);
+            const bodyMaterial = new THREE.MeshLambertMaterial({ 
+                color: missileTypes[currentMissileType].color
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.castShadow = true;
+            missileGroup.add(body);
+
+            // Nose cone
+            const noseGeometry = new THREE.ConeGeometry(1, 4, 16);
+            const noseMaterial = new THREE.MeshLambertMaterial({ color: 0x888888 });
+            const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+            nose.position.y = 8;
+            nose.castShadow = true;
+            missileGroup.add(nose);
+
+            // Fins
+            for (let i = 0; i < 4; i++) {
+                const finGeometry = new THREE.BoxGeometry(0.5, 4, 2);
+                const finMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
+                const fin = new THREE.Mesh(finGeometry, finMaterial);
+                const angle = (i / 4) * Math.PI * 2;
+                fin.position.set(
+                    Math.cos(angle) * 1.8,
+                    -4,
+                    Math.sin(angle) * 1.8
+                );
+                fin.rotation.y = angle;
+                fin.castShadow = true;
+                missileGroup.add(fin);
+            }
+
+            // Engine nozzle
+            const nozzleGeometry = new THREE.CylinderGeometry(0.8, 1.2, 2, 16);
+            const nozzleMaterial = new THREE.MeshLambertMaterial({ color: 0x444444 });
+            const nozzle = new THREE.Mesh(nozzleGeometry, nozzleMaterial);
+            nozzle.position.y = -7;
+            nozzle.castShadow = true;
+            missileGroup.add(nozzle);
+
+            // Position at launch pad
+            missileGroup.position.copy(missileParams.position);
+            missileGroup.userData.isMissile = true;
+            
+            if (missile) scene.remove(missile);
+            missile = missileGroup;
+            scene.add(missile);
+
+            // Update missile angle visualization
+            updateMissileAngle();
+        }
+
+        function updateMissileAngle() {
+            if (missile && !isFlying) {
+                const angleRad = (missileParams.angle - 90) * Math.PI / 180;
+                missile.rotation.z = angleRad;
+            }
+        }
+
+        function setupKeyboardControls() {
+            const keys = {};
+            
+            document.addEventListener('keydown', (event) => {
+                // Only handle if not focused on sidebar elements
+                if (event.target.closest('.sidebar')) return;
+                
+                keys[event.key.toLowerCase()] = true;
+                event.preventDefault();
+            });
+            
+            document.addEventListener('keyup', (event) => {
+                if (event.target.closest('.sidebar')) return;
+                
+                keys[event.key.toLowerCase()] = false;
+                event.preventDefault();
+            });
+
+            // Camera movement with keyboard
+            function updateCameraFromKeyboard() {
+                if (!controls.enabled) return;
+
+                const moveSpeed = 5;
+                const camera3D = camera;
+                
+                if (keys['w'] || keys['arrowup']) {
+                    camera3D.translateZ(-moveSpeed);
+                }
+                if (keys['s'] || keys['arrowdown']) {
+                    camera3D.translateZ(moveSpeed);
+                }
+                if (keys['a'] || keys['arrowleft']) {
+                    camera3D.translateX(-moveSpeed);
+                }
+                if (keys['d'] || keys['arrowright']) {
+                    camera3D.translateX(moveSpeed);
+                }
+                if (keys['q'] || keys['shift']) {
+                    camera3D.translateY(-moveSpeed);
+                }
+                if (keys['e'] || keys['alt']) {
+                    camera3D.translateY(moveSpeed);
+                }
+            }
+
+            setInterval(updateCameraFromKeyboard, 16);
+        }
+
+        function onCanvasClick(event) {
+            if (currentMode !== 'target') return;
+
+            // Convert mouse position to world coordinates
+            const mouse = new THREE.Vector2();
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            // Find intersection with ground
+            const intersects = raycaster.intersectObject(ground);
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                targetPosition.x = point.x;
+                targetPosition.z = point.z;
+
+                // Update UI
+                document.getElementById('targetX').textContent = Math.round(point.x);
+                document.getElementById('targetZ').textContent = Math.round(point.z);
+
+                // Show target marker
+                showTargetMarker(point);
+
+                // Calculate required parameters
+                calculateTargetParameters();
+
+                addMissionLogEntry(`Target set at coordinates (${Math.round(point.x)}, ${Math.round(point.z)})`);
+            }
+        }
+
+        function showTargetMarker(worldPosition) {
+            // Project world position to screen coordinates
+            const screenPosition = worldPosition.clone();
+            screenPosition.project(camera);
+
+            const widthHalf = getViewportWidth() / 2;
+            const heightHalf = getViewportHeight() / 2;
+
+            screenPosition.x = (screenPosition.x * widthHalf) + widthHalf;
+            screenPosition.y = -(screenPosition.y * heightHalf) + heightHalf;
+
+            const marker = document.getElementById('targetMarker');
+            marker.style.left = screenPosition.x + 'px';
+            marker.style.top = screenPosition.y + 'px';
+            marker.style.display = 'block';
+        }
+
+        function calculateTargetParameters() {
+            const distance = Math.sqrt(
+                targetPosition.x * targetPosition.x + 
+                targetPosition.z * targetPosition.z
+            );
+
+            // Simplified ballistic calculation
+            const g = missileParams.gravity;
+            const optimalAngle = 45; // degrees for maximum range
+            const requiredVelocity = Math.sqrt((distance * g) / Math.sin(2 * optimalAngle * Math.PI / 180));
+            
+            // Adjust for air resistance (simplified)
+            const adjustedVelocity = requiredVelocity * 1.15;
+            const adjustedAngle = optimalAngle + (Math.random() - 0.5) * 10; // Add some variation
+
+            // Update display
+            document.getElementById('calcAngle').textContent = Math.round(adjustedAngle);
+            document.getElementById('calcVelocity').textContent = Math.round(adjustedVelocity);
+
+            // Store calculated values for launch
+            missileParams.calculatedAngle = adjustedAngle;
+            missileParams.calculatedVelocity = Math.min(500, adjustedVelocity); // Cap at max velocity
+            missileParams.calculatedWeight = 1000 + Math.random() * 2000; // Random weight
+        }
+
+        function onWindowResize() {
+            camera.aspect = getViewportAspect();
+            camera.updateProjectionMatrix();
+            renderer.setSize(getViewportWidth(), getViewportHeight());
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Update missile physics
+            if (isFlying) {
+                updateMissilePhysics();
+            }
+
+            // Update particles
+            updateParticles();
+
+            // Update vehicles
+            updateVehicles();
+
+            // Update controls
+            controls.update();
+
+            // Update camera modes
+            updateCameraMode();
+
+            // Render
+            renderer.render(scene, camera);
+        }
+
+        function updateMissilePhysics() {
+            const deltaTime = 1/20; // 20 FPS
+            const currentTime = Date.now();
+            const flightTime = (currentTime - missionStartTime) / 1000;
+
+            // Calculate air drag based on altitude and scenario
+            let airDrag = missileParams.airDensity;
+            if (currentScenario === 'mountains') {
+                // Reduce air drag with altitude
+                airDrag *= Math.max(0.5, 1 - (missileParams.position.y / 1000));
+            }
+
+            // Apply gravity
+            missileParams.velocity3d.y -= missileParams.gravity * deltaTime;
+
+            // Apply air resistance
+            const speed = missileParams.velocity3d.length();
+            if (speed > 0) {
+                const dragForce = 0.5 * airDrag * speed * speed * 0.01; // Simplified drag
+                const dragAcceleration = dragForce / (missileParams.weight / 1000);
+                const dragDirection = missileParams.velocity3d.clone().normalize().multiplyScalar(-dragAcceleration * deltaTime);
+                missileParams.velocity3d.add(dragDirection);
+            }
+
+            // Update position
+            const positionDelta = missileParams.velocity3d.clone().multiplyScalar(deltaTime);
+            missileParams.position.add(positionDelta);
+            missile.position.copy(missileParams.position);
+
+            // Update missile orientation to face velocity direction
+            if (speed > 0.1) {
+                const direction = missileParams.velocity3d.clone().normalize();
+                missile.lookAt(missile.position.clone().add(direction));
+            }
+
+            // Track statistics
+            // update peak detection without spamming the log.
+            if (missileParams.position.y > maxAltitudeReached) {
+                maxAltitudeReached = missileParams.position.y;
+                maxAltitudeTime = flightTime;
+                altitudeWasIncreasing = true;
+                peakLogged = false; // haven't logged the eventual peak yet
+            } else {
+                // If we were increasing and now altitude fell, we've passed the peak
+                if (altitudeWasIncreasing && !peakLogged) {
+                    addMissionLogEntry(`${formatTime(flightTime)} - Max altitude reached: ${Math.round(maxAltitudeReached)} m`);
+                    peakLogged = true;
+                }
+                altitudeWasIncreasing = false;
+            }
+
+            if (speed > maxVelocityReached) {
+                maxVelocityReached = speed;
+                maxVelocityTime = flightTime;
+                addMissionLogEntry(`${formatTime(flightTime)} - Max velocity: ${Math.round(maxVelocityReached)} m/s`);
+            }
+
+            // Create smoke trail
+            if (Math.random() < 0.3) {
+                createSmokeTrail();
+            }
+
+            // Update HUD
+            updateMissileStats(flightTime, speed);
+
+            // Check for impact
+            if (missileParams.position.y <= getGroundHeight(missileParams.position.x, missileParams.position.z)) {
+                impactMissile(flightTime);
+            }
+        }
+
+        function getGroundHeight(x, z) {
+            // For mountains, calculate terrain height
+            if (currentScenario === 'mountains') {
+                const height = Math.sin(x * 0.0008) * Math.cos(z * 0.0008) * 200 +
+                              Math.sin(x * 0.002) * Math.cos(z * 0.002) * 100 +
+                              Math.sin(x * 0.005) * Math.cos(z * 0.005) * 50;
+                return Math.max(0, height);
+            }
+            return 0;
+        }
+
+        function createSmokeTrail() {
+            const smokeGeometry = new THREE.SphereGeometry(1 + Math.random(), 8, 8);
+            const smokeMaterial = new THREE.MeshBasicMaterial({
+                color: new THREE.Color().setHSL(0, 0, 0.3 + Math.random() * 0.4),
+                transparent: true,
+                opacity: 0.6
+            });
+
+            const smoke = new THREE.Mesh(smokeGeometry, smokeMaterial);
+            smoke.position.copy(missileParams.position);
+            smoke.position.add(new THREE.Vector3(
+                (Math.random() - 0.5) * 4,
+                (Math.random() - 0.5) * 4,
+                (Math.random() - 0.5) * 4
+            ));
+
+            smoke.userData.velocity = new THREE.Vector3(
+                (Math.random() - 0.5) * 2,
+                (Math.random() - 0.5) * 2,
+                (Math.random() - 0.5) * 2
+            );
+            smoke.userData.life = 3.0;
+            smoke.userData.maxLife = 3.0;
+
+            scene.add(smoke);
+            smokeParticles.push(smoke);
+        }
+
+        function createLaunchFlames() {
+            const flameSize = missileTypes[currentMissileType].flameSize;
+            const flameCount = 8 + Math.floor(flameSize * 5);
+
+            for (let i = 0; i < flameCount; i++) {
+                const flameGeometry = new THREE.SphereGeometry(0.5 + Math.random() * flameSize, 8, 8);
+                const flameMaterial = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color().setHSL(
+                        Math.random() * 0.1, // Orange to red hues
+                        1.0,
+                        0.5 + Math.random() * 0.3
+                    ),
+                    transparent: true,
+                    opacity: 0.8
+                });
+
+                const flame = new THREE.Mesh(flameGeometry, flameMaterial);
+                flame.position.copy(missileParams.position);
+                flame.position.y -= 8; // At the bottom of missile
+                flame.position.add(new THREE.Vector3(
+                    (Math.random() - 0.5) * 6,
+                    -Math.random() * 10,
+                    (Math.random() - 0.5) * 6
+                ));
+
+                flame.userData.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 4,
+                    -Math.random() * 8 - 2,
+                    (Math.random() - 0.5) * 4
+                );
+                flame.userData.life = 1.0;
+                flame.userData.maxLife = 1.0;
+
+                scene.add(flame);
+                launchFlames.push(flame);
+            }
+        }
+
+        function impactMissile(flightTime) {
+            isFlying = false;
+            addMissionLogEntry(`${formatTime(flightTime)} - IMPACT! Mission complete`);
+            document.getElementById('status').textContent = 'Impact!';
+
+            // Create explosion (increased scale)
+            createExplosion(1.6); // pass scale multiplier to make impact larger
+
+            // Hide target marker
+            document.getElementById('targetMarker').style.display = 'none';
+        }
+
+        function createExplosion(scaleMultiplier = 1.0) {
+            const warhead = warheadTypes[currentWarheadType];
+            const size = warheadSizes[currentWarheadSize];
+            const explosionSize = warhead.explosionSize * size.sizeMultiplier * scaleMultiplier;
+            const particleCount = Math.floor(warhead.particleCount * size.sizeMultiplier * scaleMultiplier * 1.2);
+
+            // Create explosion particles
+            for (let i = 0; i < particleCount; i++) {
+                const particleSize = 0.5 + Math.random() * explosionSize;
+                const particleGeometry = new THREE.SphereGeometry(particleSize, 8, 8);
+                const particleMaterial = new THREE.MeshBasicMaterial({
+                    color: warhead.color,
+                    transparent: true,
+                    opacity: 0.8
+                });
+
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                particle.position.copy(missileParams.position);
+
+                const explosionVelocity = (10 + Math.random() * 30 * explosionSize) * scaleMultiplier;
+                particle.userData.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * explosionVelocity,
+                    Math.random() * explosionVelocity * 0.8 + explosionVelocity * 0.2,
+                    (Math.random() - 0.5) * explosionVelocity
+                );
+                particle.userData.life = 2.0 + Math.random() * 2.0;
+                particle.userData.maxLife = particle.userData.life;
+
+                scene.add(particle);
+                explosionParticles.push(particle);
+            }
+
+            // Create fire rings for large explosions
+            if (scaleMultiplier >= 2.0) {
+                createFireRings(explosionSize);
+            }
+
+            // Damage nearby objects (simplified)
+            damageNearbyObjects(size.damageRadius);
+        }
+
+        function createFireRings(explosionSize) {
+            for (let ring = 0; ring < 3; ring++) {
+                const ringRadius = 10 + ring * 15 * explosionSize;
+                const ringParticles = Math.floor(20 + ring * 10);
+
+                for (let i = 0; i < ringParticles; i++) {
+                    const angle = (i / ringParticles) * Math.PI * 2;
+                    const fireGeometry = new THREE.SphereGeometry(2 + Math.random() * 3, 8, 8);
+                    const fireMaterial = new THREE.MeshBasicMaterial({
+                        color: new THREE.Color().setHSL(
+                            Math.random() * 0.15, // Red to yellow
+                            1.0,
+                            0.5 + Math.random() * 0.3
+                        ),
+                        transparent: true,
+                        opacity: 0.7
+                    });
+
+                    const fire = new THREE.Mesh(fireGeometry, fireMaterial);
+                    fire.position.copy(missileParams.position);
+                    fire.position.x += Math.cos(angle) * ringRadius;
+                    fire.position.z += Math.sin(angle) * ringRadius;
+                    fire.position.y += Math.random() * 5;
+
+                    fire.userData.velocity = new THREE.Vector3(
+                        Math.cos(angle) * 2,
+                        Math.random() * 8 + 4,
+                        Math.sin(angle) * 2
+                    );
+                    fire.userData.life = 3.0 + Math.random() * 2.0;
+                    fire.userData.maxLife = fire.userData.life;
+
+                    scene.add(fire);
+                    explosionParticles.push(fire);
+                }
+            }
+        }
+
+        function damageNearbyObjects(damageRadius) {
+            // Remove or damage objects within damage radius
+            const impactPos = missileParams.position;
+            
+            scene.children.forEach(obj => {
+                if (obj.userData.isEnvironment || obj.userData.isVehicle) {
+                    const distance = obj.position.distanceTo(impactPos);
+                    if (distance < damageRadius) {
+                        // Create debris
+                        createDebris(obj.position);
+                        
+                        // Remove smaller objects, damage larger ones
+                        if (distance < damageRadius * 0.3) {
+                            scene.remove(obj);
+                        } else if (distance < damageRadius * 0.7) {
+                            // Partially damage (change color, add tilt)
+                            if (obj.material) {
+                                obj.material.color.multiplyScalar(0.5);
+                            }
+                            obj.rotation.x += (Math.random() - 0.5) * 0.2;
+                            obj.rotation.z += (Math.random() - 0.5) * 0.2;
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDebris(position) {
+            for (let i = 0; i < 5 + Math.random() * 10; i++) {
+                const debrisGeometry = new THREE.BoxGeometry(
+                    0.5 + Math.random() * 2,
+                    0.5 + Math.random() * 2,
+                    0.5 + Math.random() * 2
+                );
+                const debrisMaterial = new THREE.MeshLambertMaterial({
+                    color: new THREE.Color().setHSL(0, 0, 0.2 + Math.random() * 0.6)
+                });
+
+                const debris = new THREE.Mesh(debrisGeometry, debrisMaterial);
+                debris.position.copy(position);
+                debris.position.add(new THREE.Vector3(
+                    (Math.random() - 0.5) * 20,
+                    Math.random() * 10,
+                    (Math.random() - 0.5) * 20
+                ));
+
+                debris.userData.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 15,
+                    Math.random() * 10 + 5,
+                    (Math.random() - 0.5) * 15
+                );
+                debris.userData.angularVelocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.2,
+                    (Math.random() - 0.5) * 0.2,
+                    (Math.random() - 0.5) * 0.2
+                );
+                debris.userData.life = 5.0 + Math.random() * 5.0;
+                debris.userData.maxLife = debris.userData.life;
+
+                scene.add(debris);
+                explosionParticles.push(debris);
+            }
+        }
+
+        function updateParticles() {
+            const deltaTime = 0.016;
+
+            // Update smoke trail
+            for (let i = smokeParticles.length - 1; i >= 0; i--) {
+                const smoke = smokeParticles[i];
+                smoke.userData.life -= deltaTime;
+
+                if (smoke.userData.life <= 0) {
+                    scene.remove(smoke);
+                    smokeParticles.splice(i, 1);
+                } else {
+                    smoke.position.add(smoke.userData.velocity.clone().multiplyScalar(deltaTime));
+                    smoke.scale.multiplyScalar(1.01); // Grow over time
+                    smoke.material.opacity = smoke.userData.life / smoke.userData.maxLife * 0.6;
+                }
+            }
+
+            // Update launch flames
+            for (let i = launchFlames.length - 1; i >= 0; i--) {
+                const flame = launchFlames[i];
+                flame.userData.life -= deltaTime;
+
+                if (flame.userData.life <= 0) {
+                    scene.remove(flame);
+                    launchFlames.splice(i, 1);
+                } else {
+                    flame.position.add(flame.userData.velocity.clone().multiplyScalar(deltaTime));
+                    flame.scale.multiplyScalar(1.05); // Grow over time
+                    flame.material.opacity = flame.userData.life / flame.userData.maxLife * 0.8;
+                }
+            }
+
+            // Update explosion particles
+            for (let i = explosionParticles.length - 1; i >= 0; i--) {
+                const particle = explosionParticles[i];
+                particle.userData.life -= deltaTime;
+
+                if (particle.userData.life <= 0) {
+                    scene.remove(particle);
+                    explosionParticles.splice(i, 1);
+                } else {
+                    // Apply gravity to particles
+                    particle.userData.velocity.y -= 9.81 * deltaTime;
+                    
+                    particle.position.add(particle.userData.velocity.clone().multiplyScalar(deltaTime));
+                    
+                    // Add rotation if it has angular velocity
+                    /*
+                    if (particle.userData.angularVelocity) {
+                        particle.rotation.add(particle.userData.angularVelocity.clone().multiplyScalar(deltaTime));
+                    }*/
+                    
+                    particle.material.opacity = particle.userData.life / particle.userData.maxLife * 0.8;
+                }
+            }
+        }
+
+        function updateVehicles() {
+            const deltaTime = 0.016;
+
+            vehicles.forEach(vehicle => {
+                // Move vehicles along their paths
+                const speed = vehicle.userData.speed;
+                const direction = vehicle.userData.direction;
+
+                const dx = Math.cos(direction) * speed * deltaTime * 60;
+                const dz = Math.sin(direction) * speed * deltaTime * 60;
+                vehicle.position.x += dx;
+                vehicle.position.z += dz;
+
+                // Keep vehicles within bounds and change direction occasionally
+                const maxDistance = 4000;
+                if (Math.abs(vehicle.position.x) > maxDistance || 
+                    Math.abs(vehicle.position.z) > maxDistance || 
+                    Math.random() < 0.001) {
+                    vehicle.userData.direction += (Math.random() - 0.5) * Math.PI;
+                }
+
+                // Face movement direction consistently with actual movement vector
+                vehicle.rotation.y = Math.atan2(dx, dz);
+            });
+        }
+
+        function updateCameraMode() {
+            if (currentCameraMode === 'follow' && isFlying && missile) {
+                // Follow missile
+                const missilePos = missile.position;
+                const offset = new THREE.Vector3(50, 20, 50);
+                camera.position.copy(missilePos.clone().add(offset));
+                camera.lookAt(missilePos);
+                controls.target.copy(missilePos);
+            } else if (currentCameraMode === 'top' && isFlying && missile) {
+                // Top-down view
+                const missilePos = missile.position;
+                camera.position.set(missilePos.x, missilePos.y + 200, missilePos.z);
+                camera.lookAt(missilePos);
+                controls.target.copy(missilePos);
+            }
+        }
+
+        function updateMissileStats(flightTime, speed) {
+            document.getElementById('altitude').textContent = Math.round(missileParams.position.y);
+            document.getElementById('velocity').textContent = Math.round(speed);
+            document.getElementById('distance').textContent = Math.round(
+                Math.sqrt(
+                    missileParams.position.x * missileParams.position.x +
+                    missileParams.position.z * missileParams.position.z
+                )
+            );
+            document.getElementById('time').textContent = flightTime.toFixed(1);
+            document.getElementById('maxAlt').textContent = Math.round(maxAltitudeReached);
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = (seconds % 60).toFixed(1);
+            return `${minutes}:${secs.padStart(4, '0')}`;
+        }
+
+        function addMissionLogEntry(message) {
+            const logDiv = document.getElementById('missionLog');
+            const entry = document.createElement('div');
+            entry.className = 'mission-log-entry';
+            entry.textContent = message;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // UI Control Functions
+        function setScenario(scenario) {
+            currentScenario = scenario;
+            
+            // Update button states
+            document.querySelectorAll('[onclick*="setScenario"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Recreate environment
+            createEnvironment();
+            setupLighting();
+            
+            addMissionLogEntry(`Scenario changed to: ${scenario}`);
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            targetMode = (mode === 'target');
+            
+            // Update button states
+            document.getElementById('manualBtn').classList.remove('active');
+            document.getElementById('targetBtn').classList.remove('active');
+            event.target.classList.add('active');
+            
+            // Show/hide appropriate controls
+            const manualControls = document.getElementById('manualControls');
+            const targetControls = document.getElementById('targetControls');
+            
+            if (mode === 'manual') {
+                manualControls.style.display = 'block';
+                targetControls.style.display = 'none';
+                document.getElementById('targetMarker').style.display = 'none';
+            } else {
+                manualControls.style.display = 'none';
+                targetControls.style.display = 'block';
+            }
+            
+            addMissionLogEntry(`Control mode: ${mode}`);
+        }
+
+        function setMissileType(type) {
+            currentMissileType = type;
+            
+            // Update button states
+            document.querySelectorAll('[onclick*="setMissileType"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update weight range based on missile type
+            const weightRange = missileTypes[type].weightRange;
+            const weightSlider = document.getElementById('weightSlider');
+            weightSlider.min = weightRange[0];
+            weightSlider.max = weightRange[1];
+            weightSlider.value = Math.min(weightSlider.value, weightRange[1]);
+            updateWeight(weightSlider.value);
+            
+            // Recreate missile with new type
+            createMissile();
+            
+            addMissionLogEntry(`Missile type: ${type}`);
+        }
+
+        function setWarheadType(type) {
+            currentWarheadType = type;
+            
+            // Update button states
+            document.querySelectorAll('[onclick*="setWarheadType"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            addMissionLogEntry(`Warhead type: ${type}`);
+        }
+
+        function setWarheadSize(size) {
+            currentWarheadSize = size;
+            
+            // Update button states
+            document.querySelectorAll('[onclick*="setWarheadSize"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            addMissionLogEntry(`Warhead size: ${size}`);
+        }
+
+        function setTimeOfDay(timeOfDay) {
+            currentTimeOfDay = timeOfDay;
+            
+            // Update button states
+            document.querySelectorAll('[onclick*="setTimeOfDay"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update lighting and environment
+            setupLighting();
+            createEnvironment();
+            
+            addMissionLogEntry(`Time of day: ${timeOfDay}`);
+        }
+
+        function setCameraMode(mode) {
+            currentCameraMode = mode;
+            
+            // Update button states
+            document.querySelectorAll('[onclick*="setCameraMode"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Reset camera controls
+            controls.enabled = (mode === 'free');
+            
+            if (mode === 'free') {
+                // Reset to default position
+                camera.position.set(100, 50, 100);
+                camera.lookAt(0, 0, 0);
+                controls.target.set(0, 0, 0);
+            }
+        }
+
+        function updateAngle(value) {
+            missileParams.angle = parseInt(value);
+            document.getElementById('angleValue').textContent = value;
+            document.getElementById('angleDisplay').textContent = value;
+            updateMissileAngle();
+        }
+
+        function updateVelocity(value) {
+            missileParams.velocity = parseInt(value);
+            document.getElementById('velocityValue').textContent = value;
+        }
+
+        function updateWeight(value) {
+            missileParams.weight = parseInt(value);
+            document.getElementById('weightValue').textContent = value;
+            document.getElementById('weightDisplay').textContent = value;
+        }
+
+        function toggleStats() {
+            const content = document.getElementById('statsContent');
+            const btn = document.querySelector('.minimize-btn');
+            
+            if (statsMinimized) {
+                content.style.display = 'block';
+                btn.textContent = '−';
+                statsMinimized = false;
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '+';
+                statsMinimized = true;
+            }
+        }
+
+        function launchMissile() {
+            if (isLaunching || isFlying) return;
+            
+            // Use calculated parameters in target mode
+            if (currentMode === 'target' && missileParams.calculatedAngle) {
+                missileParams.angle = missileParams.calculatedAngle;
+                missileParams.velocity = missileParams.calculatedVelocity;
+                missileParams.weight = missileParams.calculatedWeight;
+            }
+            
+            isLaunching = true;
+            isFlying = true;
+            missionStartTime = Date.now();
+            maxAltitudeReached = 0;
+            maxVelocityReached = 0;
+            
+            // Reset missile position
+            missileParams.position.set(0, 2, 0);
+            missile.position.copy(missileParams.position);
+            
+            // Calculate initial velocity vector
+            const angleRad = missileParams.angle * Math.PI / 180;
+            const velocityMagnitude = missileParams.velocity;
+            
+            missileParams.velocity3d.set(
+                Math.cos(angleRad) * velocityMagnitude,
+                Math.sin(angleRad) * velocityMagnitude,
+                0
+            );
+            
+            // Create launch flames
+            createLaunchFlames();
+            
+            document.getElementById('status').textContent = 'Launched!';
+            addMissionLogEntry(`0:00.0 - LAUNCH! Angle: ${missileParams.angle}°, Velocity: ${missileParams.velocity} m/s, Weight: ${missileParams.weight} kg`);
+        }
+
+        function resetSimulation() {
+            isLaunching = false;
+            isFlying = false;
+            
+            // Clear particles
+            smokeParticles.forEach(particle => scene.remove(particle));
+            smokeParticles = [];
+            launchFlames.forEach(flame => scene.remove(flame));
+            launchFlames = [];
+            explosionParticles.forEach(particle => scene.remove(particle));
+            explosionParticles = [];
+            
+            // Remove vehicles (if any) and reset vehicle list
+            vehicles.forEach(v => scene.remove(v));
+            vehicles = [];
+
+            // Reset missile
+            missileParams.position.set(0, 2, 0);
+            missileParams.velocity3d.set(0, 0, 0);
+            missile.position.copy(missileParams.position);
+            missile.rotation.set(0, 0, 0);
+            
+            // Reset camera if needed
+            if (currentCameraMode !== 'free') {
+                setCameraMode('free');
+                document.querySelectorAll('[onclick*="setCameraMode"]').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelectorAll('[onclick*="setCameraMode"]')[0].classList.add('active');
+                currentCameraMode = 'free';
+            }
+            
+            // Reset stats
+            document.getElementById('status').textContent = 'Ready';
+            document.getElementById('altitude').textContent = '0';
+            document.getElementById('velocity').textContent = '0';
+            document.getElementById('distance').textContent = '0';
+            document.getElementById('time').textContent = '0.0';
+            document.getElementById('maxAlt').textContent = '0';
+            
+            // Hide target marker
+            document.getElementById('targetMarker').style.display = 'none';
+            
+            // Clear mission log
+            document.getElementById('missionLog').innerHTML = '<div class="mission-log-entry">System Reset - Ready for new mission</div>';
+            
+            // Recreate environment to repair damage
+            createEnvironment();
+        }
+
+        // Initialize everything when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

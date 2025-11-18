@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced 3D Missile Launch Simulator</title>
+    <link href="bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./missile4/style.css">
+    <script src="three.min.js"></script>
+</head>
+<body>
+    <div class="container-fluid h-100">
+        <div class="row h-100">
+            <!-- Left Control Sidebar -->
+            <div class="col-md-3 sidebar">
+                <!-- Mission Statistics Panel -->
+                <div class="stats-panel mb-3">
+                    <h6><i class="fas fa-rocket"></i> Mission Stats</h6>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Altitude:</span> 
+                            <span class="stat-value" id="altitude">0 m</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Velocity:</span> 
+                            <span class="stat-value" id="velocity">0 m/s</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Distance:</span> 
+                            <span class="stat-value" id="distance">0 m</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Flight Time:</span> 
+                            <span class="stat-value" id="time">0 s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario Selection -->
+                <div class="control-section mb-3">
+                    <label class="section-label">🌍 Environment</label>
+                    <div class="btn-group w-100 mb-2" role="group">
+                        <input type="radio" class="btn-check" name="scenario" id="grassland" value="grassland" checked>
+                        <label class="btn btn--scenario" for="grassland">Grass</label>
+                        <input type="radio" class="btn-check" name="scenario" id="city" value="city">
+                        <label class="btn btn--scenario" for="city">City</label>
+                        <input type="radio" class="btn-check" name="scenario" id="desert" value="desert">
+                        <label class="btn btn--scenario" for="desert">Desert</label>
+                    </div>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="scenario" id="sea" value="sea">
+                        <label class="btn btn--scenario" for="sea">Sea</label>
+                        <input type="radio" class="btn-check" name="scenario" id="forest" value="forest">
+                        <label class="btn btn--scenario" for="forest">Forest</label>
+                        <input type="radio" class="btn-check" name="scenario" id="mountains" value="mountains">
+                        <label class="btn btn--scenario" for="mountains">Mountain</label>
+                    </div>
+                </div>
+
+                <!-- Time of Day Selection -->
+                <div class="control-section mb-3">
+                    <label class="section-label">☀️ Time of Day</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="timeOfDay" id="day" value="day" checked>
+                        <label class="btn btn--time" for="day">☀️ Day</label>
+                        <input type="radio" class="btn-check" name="timeOfDay" id="evening" value="evening">
+                        <label class="btn btn--time" for="evening">🌅 Evening</label>
+                        <input type="radio" class="btn-check" name="timeOfDay" id="night" value="night">
+                        <label class="btn btn--time" for="night">🌙 Night</label>
+                    </div>
+                </div>
+
+                <!-- Missile Type Selection -->
+                <div class="control-section mb-3">
+                    <label class="section-label">🚀 Missile Type</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="missileType" id="light" value="light" checked>
+                        <label class="btn btn--missile" for="light">Light</label>
+                        <input type="radio" class="btn-check" name="missileType" id="medium" value="medium">
+                        <label class="btn btn--missile" for="medium">Medium</label>
+                        <input type="radio" class="btn-check" name="missileType" id="heavy" value="heavy">
+                        <label class="btn btn--missile" for="heavy">Heavy</label>
+                    </div>
+                </div>
+
+                <!-- Warhead Type Selection -->
+                <div class="control-section mb-3">
+                    <label class="section-label">💥 Warhead Type</label>
+                    <div class="btn-group w-100 mb-2" role="group">
+                        <input type="radio" class="btn-check" name="warheadType" id="he" value="he" checked>
+                        <label class="btn btn--warhead" for="he">HE</label>
+                        <input type="radio" class="btn-check" name="warheadType" id="frag" value="frag">
+                        <label class="btn btn--warhead" for="frag">Frag</label>
+                    </div>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="warheadType" id="inc" value="inc">
+                        <label class="btn btn--warhead" for="inc">Inc</label>
+                        <input type="radio" class="btn-check" name="warheadType" id="nuke" value="nuke">
+                        <label class="btn btn--warhead" for="nuke">☢️ Nuke</label>
+                    </div>
+                </div>
+
+                <!-- Warhead Size Selection -->
+                <div class="control-section mb-3">
+                    <label class="section-label">📏 Warhead Size</label>
+                    <div class="btn-group w-100 mb-2" role="group">
+                        <input type="radio" class="btn-check" name="warheadSize" id="small" value="small">
+                        <label class="btn btn--size" for="small">Small</label>
+                        <input type="radio" class="btn-check" name="warheadSize" id="mediumSize" value="medium" checked>
+                        <label class="btn btn--size" for="mediumSize">Medium</label>
+                    </div>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="warheadSize" id="large" value="large">
+                        <label class="btn btn--size" for="large">Large</label>
+                        <input type="radio" class="btn-check" name="warheadSize" id="xl" value="xl">
+                        <label class="btn btn--size" for="xl">XL</label>
+                    </div>
+                </div>
+
+                <!-- Camera Controls -->
+                <div class="control-section mb-3">
+                    <label class="section-label">📹 Camera Mode</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="cameraMode" id="free" value="free" checked>
+                        <label class="btn btn--camera" for="free">Free</label>
+                        <input type="radio" class="btn-check" name="cameraMode" id="follow" value="follow">
+                        <label class="btn btn--camera" for="follow">Follow</label>
+                        <input type="radio" class="btn-check" name="cameraMode" id="top" value="top">
+                        <label class="btn btn--camera" for="top">Top</label>
+                    </div>
+                </div>
+
+                <!-- Launch Parameters -->
+                <div class="control-section mb-3">
+                    <label class="section-label">🎯 Launch Parameters</label>
+                    
+                    <div class="parameter-control mb-3">
+                        <label class="parameter-label">Launch Angle: <span class="parameter-value" id="angleValue">45°</span></label>
+                        <input type="range" class="form-range parameter-slider" id="angle" min="0" max="90" value="45">
+                    </div>
+
+                    <div class="parameter-control mb-3">
+                        <label class="parameter-label">Initial Velocity: <span class="parameter-value" id="velocityValue">100 m/s</span></label>
+                        <input type="range" class="form-range parameter-slider" id="initialVelocity" min="50" max="500" value="100">
+                    </div>
+
+                    <div class="parameter-control mb-3">
+                        <label class="parameter-label">Cone Spread: <span class="parameter-value" id="coneValue">0°</span></label>
+                        <input type="range" class="form-range parameter-slider" id="coneAngle" min="0" max="90" value="0">
+                    </div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="control-section mb-3">
+                    <label class="section-label">🎮 Launch Control</label>
+                    <div class="action-buttons">
+                        <button class="btn btn--launch" id="launchBtn">
+                            <span class="btn-icon">🚀</span>
+                            <span class="btn-text">Launch Missile</span>
+                        </button>
+                        <button class="btn btn--reset" id="resetBtn">
+                            <span class="btn-icon">🔄</span>
+                            <span class="btn-text">Reset</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Target Mode Toggle -->
+                <div class="control-section">
+                    <div class="target-mode-container">
+                        <div class="form-check form-switch target-switch">
+                            <input class="form-check-input" type="checkbox" id="targetMode">
+                            <label class="form-check-label target-label" for="targetMode">
+                                <span class="target-icon">🎯</span>
+                                Target Mode
+                            </label>
+                        </div>
+                        <small class="target-help">Click terrain to set target location and calculate optimal trajectory</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main 3D Viewport -->
+            <div class="col-md-9 p-0 viewport-container">
+                <div id="viewport" class="viewport"></div>
+                
+                <!-- Control Instructions Overlay -->
+                <div class="controls-overlay">
+                    <div class="controls-card">
+                        <h6 class="controls-title">🎮 Controls</h6>
+                        <div class="controls-grid">
+                            <div class="control-group">
+                                <strong>Camera Movement:</strong><br>
+                                <code>WASD</code> - Move camera<br>
+                                <code>Q/E</code> - Up/Down<br>
+                                <code>Mouse Drag</code> - Look around
+                            </div>
+                            <div class="control-group">
+                                <strong>Camera Zoom:</strong><br>
+                                <code>+/-</code> - Zoom in/out<br>
+                                <code>Mouse Wheel</code> - Zoom<br>
+                                <code>Arrow Keys</code> - Fine rotation
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="loadingIndicator" class="loading-indicator">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Initializing 3D Environment...</div>
+                </div>
+
+                <!-- Performance Stats -->
+                <div class="performance-stats" id="performanceStats">
+                    <div class="fps-counter">FPS: <span id="fpsCounter">60</span></div>
+                    <div class="object-counter">Objects: <span id="objectCounter">0</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="bootstrap.bundle.min.js"></script>
+    <script src=".\missile4\app.js"></script>
+
+    <!-- Additional Script for UI Enhancements -->
+    <script>
+        // Hide loading indicator after page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('loadingIndicator');
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => {
+                        loader.style.display = 'none';
+                    }, 500);
+                }
+            }, 2000);
+        });
+
+        // Add smooth transitions for button states
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add ripple effect to buttons
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    const ripple = document.createElement('div');
+                    ripple.classList.add('ripple-effect');
+                    
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    const x = e.clientX - rect.left - size / 2;
+                    const y = e.clientY - rect.top - size / 2;
+                    
+                    ripple.style.width = ripple.style.height = size + 'px';
+                    ripple.style.left = x + 'px';
+                    ripple.style.top = y + 'px';
+                    
+                    this.appendChild(ripple);
+                    
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 600);
+                });
+            });
+
+            // Add tooltips for enhanced UX
+            const tooltipElements = [
+                { selector: '#targetMode', text: 'Enable to click on terrain and automatically calculate trajectory' },
+                { selector: '#angle', text: 'Launch angle affects range and flight time' },
+                { selector: '#initialVelocity', text: 'Higher velocity increases range but may reduce accuracy' },
+                { selector: '#coneAngle', text: 'Adds random spread to simulate real-world conditions' }
+            ];
+
+            tooltipElements.forEach(({ selector, text }) => {
+                const element = document.querySelector(selector);
+                if (element) {
+                    element.setAttribute('title', text);
+                }
+            });
+        });
+
+        // Enhanced FPS counter and performance monitoring
+        let frameCount = 0;
+        let lastTime = performance.now();
+        
+        function updatePerformanceStats() {
+            frameCount++;
+            const currentTime = performance.now();
+            
+            if (currentTime - lastTime >= 1000) {
+                const fps = Math.round(frameCount * 1000 / (currentTime - lastTime));
+                const fpsElement = document.getElementById('fpsCounter');
+                if (fpsElement) {
+                    fpsElement.textContent = fps;
+                    fpsElement.className = fps >= 55 ? 'fps-good' : fps >= 30 ? 'fps-medium' : 'fps-poor';
+                }
+                
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+            
+            requestAnimationFrame(updatePerformanceStats);
+        }
+        
+        // Start performance monitoring
+        requestAnimationFrame(updatePerformanceStats);
+    </script>
+</body>
+</html>

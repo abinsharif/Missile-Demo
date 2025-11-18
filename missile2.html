@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Missile Launch Simulation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #283593 100%);
+            color: white;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .control-panel {
+            width: 350px;
+            background: rgba(13, 19, 33, 0.95);
+            padding: 20px;
+            border-right: 2px solid #4fc3f7;
+            box-shadow: 0 0 20px rgba(79, 195, 247, 0.3);
+            overflow-y: auto;
+            z-index: 10;
+        }
+        
+        .view-port {
+            flex: 1;
+            position: relative;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #4fc3f7;
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(25, 35, 60, 0.6);
+            border-radius: 8px;
+            border: 1px solid #3949ab;
+        }
+        
+        .control-group h3 {
+            margin-bottom: 12px;
+            color: #29b6f6;
+        }
+        
+        .slider-container {
+            margin: 10px 0;
+        }
+        
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+            background: #3949ab;
+            height: 6px;
+            border-radius: 3px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4fc3f7;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(79, 195, 247, 0.8);
+        }
+        
+        .value-display {
+            text-align: center;
+            font-weight: bold;
+            color: #4fc3f7;
+            font-size: 18px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(45deg, #2196f3, #1976d2);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 10px 0;
+        }
+        
+        button:hover {
+            background: linear-gradient(45deg, #2196f3, #1565c0);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .status-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            z-index: 5;
+        }
+        
+        .info-text {
+            margin: 3px 0;
+            font-size: 14px;
+        }
+        
+        .explosion {
+            position: absolute;
+            pointer-events: none;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .simulation-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(25, 35, 60, 0.6);
+            border-radius: 8px;
+            border: 1px solid #3949ab;
+        }
+        
+        .missile-properties {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .property {
+            background: rgba(33, 33, 33, 0.6);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .camera-controls {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(25, 35, 60, 0.6);
+            border-radius: 8px;
+            border: 1px solid #3949ab;
+        }
+        
+        .camera-controls h4 {
+            margin-bottom: 8px;
+            color: #29b6f6;
+        }
+        
+        .control-hint {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="control-panel">
+            <h1>MISSILE LAUNCH SIMULATOR</h1>
+            
+            <div class="control-group">
+                <h3>LAUNCH PARAMETERS</h3>
+                
+                <div class="slider-container">
+                    <label>LAUNCH ANGLE: <span id="angle-value">45</span>°</label>
+                    <input type="range" id="angle" min="5" max="175" value="45" step="1">
+                </div>
+                
+                <div class="slider-container">
+                    <label>INITIAL VELOCITY: <span id="velocity-value">100</span> m/s</label>
+                    <input type="range" id="velocity" min="10" max="500" value="100" step="5">
+                </div>
+                
+                <div class="slider-container">
+                    <label>MISSILE WEIGHT: <span id="weight-value">1000</span> KG</label>
+                    <input type="range" id="weight" min="100" max="10000" value="1000" step="100">
+                </div>
+                
+                <div class="slider-container">
+                    <label>AIR DENSITY: <span id="air-density-value">1.2</span> kg/m³</label>
+                    <input type="range" id="air-density" min="0.5" max="2.0" value="1.2" step="0.1">
+                </div>
+            </div>
+            
+            <button id="launch-btn">LAUNCH MISSILE</button>
+            <button id="reset-btn">RESET SIMULATION</button>
+            <button id="follow-btn">FOLLOW MISSILE</button>
+            
+            <div class="camera-controls">
+                <h4>CAMERA CONTROLS</h4>
+                <div class="control-hint">• Left Click + Drag: Rotate Camera</div>
+                <div class="control-hint">• Right Click + Drag: Pan Camera</div>
+                <div class="control-hint">• Mouse Wheel: Zoom In/Out</div>
+            </div>
+            
+            <div class="simulation-info">
+                <h3>PHYSICS PARAMETERS</h3>
+                <div class="missile-properties">
+                    <div class="property">GRAVITY: 9.81 m/s²</div>
+                    <div class="property">DRAG COEFFICIENT: 0.3</div>
+                    <div class="property">CROSS-SECTION: 0.8 m²</div>
+                    <div class="property">MAX ALTITUDE: <span id="max-altitude">0</span> m</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="view-port">
+            <div id="canvas"></div>
+            <div class="status-panel">
+                <div class="info-text">ALTITUDE: <span id="altitude">0</span> m</div>
+                <div class="info-text">VELOCITY: <span id="current-velocity">0</span> m/s</div>
+                <div class="info-text">DISTANCE: <span id="distance">0</span> m</div>
+                <div class="info-text">TIME: <span id="time">0</span> s</div>
+                <div class="info-text">CAMERA: <span id="camera-mode">FREE</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Three.js scene setup
+        let scene, camera, renderer, controls;
+        let missile, ground, launchPlatform;
+        let clouds = [], trees = [], hills = [];
+        let isSimulating = false;
+        let simulationTime = 0;
+        let cameraMode = 'free'; // 'free' or 'follow'
+        
+        // Physics parameters
+        const GRAVITY = 9.81;
+        let launchAngle = 45;
+        let initialVelocity = 100;
+        let missileWeight = 1000;
+        let airDensity = 1.2;
+        const DRAG_COEFFICIENT = 0.3;
+        const CROSS_SECTIONAL_AREA = 0.8;
+        
+        // Missile state
+        let missilePosition = { x: 0, y: 0, z: 0 };
+        let missileVelocity = { x: 0, y: 0, z: 0 };
+        let missileRotation = { x: 0, y: 0, z: 0 };
+        let maxAltitude = 0;
+        
+        function init() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 50, 100);
+            camera.lookAt(0, 0, 0);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas').appendChild(renderer.domElement);
+            
+            // OrbitControls for camera movement
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 20;
+            controls.maxDistance = 1000;
+            controls.maxPolarAngle = Math.PI;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 100, 50);
+            scene.add(directionalLight);
+            
+            // Create environment
+            createGround();
+            createLaunchSite();
+            createEnvironment();
+            createMissile();
+            
+            // Event listeners
+            setupEventListeners();
+            
+            // Start animation loop
+            animate();
+        }
+        
+        function createGround() {
+            const groundGeometry = new THREE.PlaneGeometry(2000, 2000);
+            const groundMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x4CAF50,
+                side: THREE.DoubleSide
+            });
+            ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            scene.add(ground);
+            
+            // Add texture pattern
+            const gridGeometry = new THREE.PlaneGeometry(2000, 2000, 40, 40);
+            const gridMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF, opacity: 0.2, transparent: true });
+            const grid = new THREE.LineSegments(
+                new THREE.EdgesGeometry(gridGeometry),
+                gridMaterial
+            );
+            grid.rotation.x = -Math.PI / 2;
+            grid.position.y = 0.1;
+            scene.add(grid);
+        }
+        
+        function createLaunchSite() {
+            // Launch platform
+            const platformGeometry = new THREE.BoxGeometry(15, 2, 15);
+            const platformMaterial = new THREE.MeshLambertMaterial({ color: 0x78909C });
+            launchPlatform = new THREE.Mesh(platformGeometry, platformMaterial);
+            launchPlatform.position.set(0, 1, 0);
+            scene.add(launchPlatform);
+            
+            // Launch rail
+            const railGeometry = new THREE.CylinderGeometry(0.5, 0.5, 10, 16);
+            const railMaterial = new THREE.MeshLambertMaterial({ color: 0xB0BEC5 });
+            const rail = new THREE.Mesh(railGeometry, railMaterial);
+            rail.rotation.z = Math.PI / 2;
+            rail.position.set(0, 5, 7.5);
+            scene.add(rail);
+            
+            // Support structure
+            const supportGeometry = new THREE.BoxGeometry(1, 8, 1);
+            const supportMaterial = new THREE.MeshLambertMaterial({ color: 0x546E7A });
+            for (let i = -3; i <= 3; i += 6) {
+                const support = new THREE.Mesh(supportGeometry, supportMaterial);
+                support.position.set(i, 4, 3);
+                scene.add(support);
+            }
+        }
+        
+        function createEnvironment() {
+            // Create clouds
+            for (let i = 0; i < 30; i++) {
+                const cloud = createCloud();
+                cloud.position.set(
+                    Math.random() * 1800 - 900,
+                    30 + Math.random() * 60,
+                    Math.random() * 1800 - 900
+                );
+                scene.add(cloud);
+                clouds.push(cloud);
+            }
+            
+            // Create trees
+            for (let i = 0; i < 500; i++) {
+                const tree = createTree(0.5 + Math.random() * 1.5);
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 20 + Math.random() * 1000;
+                tree.position.set(
+                    Math.cos(angle) * distance,
+                    0,
+                    Math.sin(angle) * distance
+                );
+                scene.add(tree);
+                trees.push(tree);
+            }
+            
+            // Create hills
+            for (let i = 0; i < 15; i++) {
+                const hill = createHill();
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 200 + Math.random() * 400;
+                hill.position.set(
+                    Math.cos(angle) * distance,
+                    -5,
+                    Math.sin(angle) * distance
+                );
+                hill.scale.set(
+                    1 + Math.random() * 2,
+                    1 + Math.random() * 1.5,
+                    1 + Math.random() * 2
+                );
+                scene.add(hill);
+                hills.push(hill);
+            }
+        }
+        
+        function createCloud() {
+            const group = new THREE.Group();
+            const cloudMaterial = new THREE.MeshLambertMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.8 });
+            
+            for (let i = 0; i < 5; i++) {
+                const size = 5 + Math.random() * 8;
+                const sphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(size, 8, 8),
+                    cloudMaterial
+                );
+                sphere.position.set(
+                    (Math.random() - 0.5) * 20,
+                    (Math.random() - 0.5) * 8,
+                    (Math.random() - 0.5) * 20
+                );
+                group.add(sphere);
+            }
+            
+            return group;
+        }
+        
+        function createTree(s=1) {
+            const group = new THREE.Group();
+            
+            // Trunk
+            const trunkGeometry = new THREE.CylinderGeometry(0.5*s, 0.8*s, 6*s, 8*s);
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = 3*s;
+            group.add(trunk);
+            
+            // Foliage
+            const foliageGeometry = new THREE.ConeGeometry(3*s, 8*s, 8*s);
+            const foliageMaterial = new THREE.MeshLambertMaterial({ color: 0x2E7D32 });
+            const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+            foliage.position.y = 8*s;
+            group.add(foliage);
+            
+            return group;
+        }
+        
+        function createHill() {
+            const geometry = new THREE.ConeGeometry(30, 25, 32);
+            const material = new THREE.MeshLambertMaterial({ color: 0x7CB342 });
+            const hill = new THREE.Mesh(geometry, material);
+            hill.rotation.x = Math.PI;
+            return hill;
+        }
+        
+        function createMissile() {
+            const group = new THREE.Group();
+            
+            // Missile body
+            const bodyGeometry = new THREE.CylinderGeometry(0.8, 1.2, 8, 16);
+            const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0xE0E0E0 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            group.add(body);
+            
+            // Nose cone
+            const noseGeometry = new THREE.ConeGeometry(0.8, 3, 16);
+            const noseMaterial = new THREE.MeshLambertMaterial({ color: 0xF44336 });
+            const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+            nose.position.y = 5.5;
+            group.add(nose);
+            
+            // Fins
+            const finGeometry = new THREE.BoxGeometry(1, 2, 0.2);
+            const finMaterial = new THREE.MeshLambertMaterial({ color: 0x1976D2 });
+            
+            for (let i = 0; i < 4; i++) {
+                const fin = new THREE.Mesh(finGeometry, finMaterial);
+                const angle = (i * Math.PI / 2);
+                fin.position.set(
+                    Math.cos(angle) * 1.2,
+                    -3,
+                    Math.sin(angle) * 1.2
+                );
+                fin.rotation.y = angle;
+                group.add(fin);
+            }
+            
+            // Engine exhaust (initially hidden)
+            const exhaustGeometry = new THREE.ConeGeometry(1.5, 4, 16);
+            const exhaustMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0xFF9800,
+                transparent: true,
+                opacity: 0
+            });
+            const exhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+            exhaust.position.y = -4;
+            exhaust.rotation.x = Math.PI;
+            group.add(exhaust);
+            
+            missile = group;
+            missile.position.set(0, 4, 0);
+            scene.add(missile);
+            
+            return group;
+        }
+        
+        function launchMissile() {
+            if (isSimulating) return;
+            
+            isSimulating = true;
+            simulationTime = 0;
+            maxAltitude = 0;
+            
+            // Convert angle to radians and calculate initial velocity components
+            const angleRad = launchAngle * Math.PI / 180;
+            missileVelocity.x = initialVelocity * Math.cos(angleRad);
+            missileVelocity.y = initialVelocity * Math.sin(angleRad);
+            missileVelocity.z = 0;
+            
+            missilePosition.x = 0;
+            missilePosition.y = 4;
+            missilePosition.z = 0;
+            
+            // Show exhaust
+            missile.children[4].material.opacity = 0.8;
+            
+            // Reset camera to follow mode if enabled
+            if (cameraMode === 'follow') {
+                updateCameraFollow();
+            }
+        }
+        
+        function updateMissile(deltaTime) {
+            if (!isSimulating) return;
+            
+            simulationTime += deltaTime;
+            
+            // Calculate air resistance (drag force)
+            const speed = Math.sqrt(
+                missileVelocity.x * missileVelocity.x +
+                missileVelocity.y * missileVelocity.y +
+                missileVelocity.z * missileVelocity.z
+            );
+            
+            if (speed > 0) {
+                const dragForce = 0.5 * airDensity * speed * speed * DRAG_COEFFICIENT * CROSS_SECTIONAL_AREA;
+                const dragAcceleration = dragForce / missileWeight;
+                
+                // Apply drag in opposite direction of velocity
+                missileVelocity.x -= (missileVelocity.x / speed) * dragAcceleration * deltaTime;
+                missileVelocity.y -= (missileVelocity.y / speed) * dragAcceleration * deltaTime;
+                missileVelocity.z -= (missileVelocity.z / speed) * dragAcceleration * deltaTime;
+            }
+            
+            // Apply gravity
+            missileVelocity.y -= GRAVITY * deltaTime;
+            
+            // Update position
+            missilePosition.x += missileVelocity.x * deltaTime;
+            missilePosition.y += missileVelocity.y * deltaTime;
+            missilePosition.z += missileVelocity.z * deltaTime;
+            
+            // Update missile rotation to face velocity direction
+            if (speed > 0.1) {
+                missileRotation.x = Math.atan2(missileVelocity.y, Math.sqrt(missileVelocity.x * missileVelocity.x + missileVelocity.z * missileVelocity.z));
+                missileRotation.y = Math.atan2(missileVelocity.x, missileVelocity.z);
+            }
+            
+            missile.rotation.x = missileRotation.x;
+            missile.rotation.y = missileRotation.y;
+            
+            // Update missile position
+            missile.position.set(missilePosition.x, missilePosition.y, missilePosition.z);
+            
+            // Update altitude display
+            maxAltitude = Math.max(maxAltitude, missilePosition.y);
+            document.getElementById('max-altitude').textContent = Math.round(maxAltitude);
+            
+            document.getElementById('altitude').textContent = Math.round(missilePosition.y);
+            document.getElementById('current-velocity').textContent = Math.round(speed);
+            document.getElementById('distance').textContent = Math.round(Math.sqrt(missilePosition.x * missilePosition.x + missilePosition.z * missilePosition.z));
+            document.getElementById('time').textContent = simulationTime.toFixed(1);
+            
+            // Update camera if in follow mode
+            if (cameraMode === 'follow') {
+                updateCameraFollow();
+            }
+            
+            // Hide exhaust after initial launch
+            if (simulationTime > 2) {
+                missile.children[4].material.opacity = Math.max(0, missile.children[4].material.opacity - deltaTime);
+            }
+            
+            // Check for ground collision
+            if (missilePosition.y <= 0) {
+                createExplosion();
+                resetSimulation();
+            }
+        }
+        
+        function updateCameraFollow() {
+            if (!isSimulating) return;
+            
+            // Calculate distance from missile
+            const distance = 50;
+            
+            // Position camera behind and above the missile
+            const behindOffset = -distance;
+            const aboveOffset = distance * 0.3;
+            
+            // Calculate camera position based on missile's direction
+            const direction = new THREE.Vector3(
+                Math.sin(missile.rotation.y),
+                0,
+                Math.cos(missile.rotation.y)
+            ).normalize();
+            
+            const cameraPos = new THREE.Vector3(
+                missilePosition.x + direction.x * behindOffset,
+                missilePosition.y + aboveOffset,
+                missilePosition.z + direction.z * behindOffset
+            );
+            
+            // Smooth camera movement
+            camera.position.lerp(cameraPos, 0.1);
+            
+            // Look at the missile
+            camera.lookAt(missilePosition.x, missilePosition.y, missilePosition.z);
+            
+            // Update controls target
+            controls.target.set(missilePosition.x, missilePosition.y, missilePosition.z);
+        }
+        
+        function createExplosion() {
+            const explosionSize = 2 + (missileWeight / 2000); // Scale with weight
+            
+            // Create explosion particles
+            const particleCount = 150;
+            const particles = new THREE.Group();
+            const particleMaterial = new THREE.MeshLambertMaterial({
+                color: 0xFF6D00,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            for (let i = 0; i < particleCount; i++) {
+                const size = 0.5 + Math.random() * explosionSize / 2;
+                const particle = new THREE.Mesh(
+                    new THREE.SphereGeometry(size, 8, 8),
+                    particleMaterial.clone()
+                );
+                
+                const angle = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                const speed = 15 + Math.random() * 30;
+                
+                particle.userData = {
+                    velocity: new THREE.Vector3(
+                        speed * Math.sin(phi) * Math.cos(angle),
+                        speed * Math.sin(phi) * Math.sin(angle),
+                        speed * Math.cos(phi)
+                    ),
+                    lifetime: 2 + Math.random()
+                };
+                
+                particle.position.copy(missile.position);
+                particles.add(particle);
+            }
+            
+            scene.add(particles);
+            
+            // Animate particles
+            const animateParticles = () => {
+                let aliveParticles = 0;
+                
+                particles.children.forEach(particle => {
+                    particle.userData.lifetime -= 0.016;
+                    
+                    if (particle.userData.lifetime > 0) {
+                        particle.position.addScaledVector(particle.userData.velocity, 0.016);
+                        particle.material.opacity = particle.userData.lifetime / 2;
+                        particle.scale.multiplyScalar(0.99);
+                        aliveParticles++;
+                    } else {
+                        particles.remove(particle);
+                    }
+                });
+                
+                if (aliveParticles > 0) {
+                    requestAnimationFrame(animateParticles);
+                } else {
+                    scene.remove(particles);
+                }
+            };
+            
+            animateParticles();
+            
+            // Create shockwave
+            const shockwaveGeometry = new THREE.SphereGeometry(1, 16, 16);
+            const shockwaveMaterial = new THREE.MeshLambertMaterial({
+                color: 0xFFD600,
+                transparent: true,
+                opacity: 0.6,
+                wireframe: true
+            });
+            
+            const shockwave = new THREE.Mesh(shockwaveGeometry, shockwaveMaterial);
+            shockwave.position.copy(missile.position);
+            scene.add(shockwave);
+            
+            let shockwaveTime = 0;
+            const animateShockwave = () => {
+                shockwaveTime += 0.016;
+                shockwave.scale.set(1 + shockwaveTime * 15, 1 + shockwaveTime * 15, 1 + shockwaveTime * 15);
+                shockwave.material.opacity = 0.6 - shockwaveTime * 0.3;
+                
+                if (shockwaveTime < 2) {
+                    requestAnimationFrame(animateShockwave);
+                } else {
+                    scene.remove(shockwave);
+                }
+            };
+            
+            animateShockwave();
+        }
+        
+        function resetSimulation() {
+            isSimulating = false;
+            missile.position.set(0, 4, 0);
+            missile.rotation.set(0, 0, 0);
+            missile.children[4].material.opacity = 0;
+            
+            missileVelocity.x = 0;
+            missileVelocity.y = 0;
+            missileVelocity.z = 0;
+            
+            // Reset camera to default position if not in follow mode
+            if (cameraMode !== 'follow') {
+                camera.position.set(0, 50, 100);
+                camera.lookAt(0, 0, 0);
+                controls.target.set(0, 0, 0);
+            }
+            
+            document.getElementById('altitude').textContent = "0";
+            document.getElementById('current-velocity').textContent = "0";
+            document.getElementById('distance').textContent = "0";
+            document.getElementById('time').textContent = "0";
+        }
+        
+        function toggleCameraFollow() {
+            cameraMode = cameraMode === 'follow' ? 'free' : 'follow';
+            document.getElementById('camera-mode').textContent = cameraMode.toUpperCase();
+            document.getElementById('follow-btn').textContent = cameraMode === 'follow' ? 'FREE CAMERA' : 'FOLLOW MISSILE';
+            
+            if (cameraMode === 'free') {
+                // Enable orbit controls
+                controls.enabled = true;
+            } else {
+                // Disable orbit controls during follow mode
+                controls.enabled = false;
+                if (isSimulating) {
+                    updateCameraFollow();
+                }
+            }
+        }
+        
+        function setupEventListeners() {
+            // Slider events
+            document.getElementById('angle').addEventListener('input', function() {
+                launchAngle = parseInt(this.value);
+                document.getElementById('angle-value').textContent = launchAngle;
+            });
+            
+            document.getElementById('velocity').addEventListener('input', function() {
+                initialVelocity = parseInt(this.value);
+                document.getElementById('velocity-value').textContent = initialVelocity;
+            });
+            
+            document.getElementById('weight').addEventListener('input', function() {
+                missileWeight = parseInt(this.value);
+                document.getElementById('weight-value').textContent = missileWeight;
+            });
+            
+            document.getElementById('air-density').addEventListener('input', function() {
+                airDensity = parseFloat(this.value);
+                document.getElementById('air-density-value').textContent = airDensity.toFixed(1);
+            });
+            
+            // Button events
+            document.getElementById('launch-btn').addEventListener('click', launchMissile);
+            document.getElementById('reset-btn').addEventListener('click', resetSimulation);
+            document.getElementById('follow-btn').addEventListener('click', toggleCameraFollow);
+            
+            // Window resize
+            window.addEventListener('resize', function() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const deltaTime = 0.016; // Approximate 60 FPS
+            
+            updateMissile(deltaTime);
+            
+            // Update controls
+            controls.update();
+            
+            // Animate clouds
+            clouds.forEach(cloud => {
+                cloud.position.x += 0.2;
+                if (cloud.position.x > 900) cloud.position.x = -900;
+            });
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Initialize the simulation
+        init();
+    </script>
+</body>
+</html>
+

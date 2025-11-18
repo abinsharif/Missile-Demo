@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Missile 3D Demos — Index</title>
+  <link rel="stylesheet" href="bootstrap.min.css">
+  <style>
+    body { padding-top: 56px; background:#f8f9fa; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,.08); }
+    .card-title { font-size: 1.05rem; }
+    footer { background: #fff; padding: 18px 0; border-top: 1px solid #e9ecef; }
+    .desc { font-size: .95rem; color:#495057; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top border-bottom">
+    <div class="container">
+      <a class="navbar-brand" href="#">Missile 3D Demos</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="missile1.html" target="_blank">Open Demo</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" onclick="location.reload()">Refresh</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="py-4">
+      <h1 class="mb-2">Available demos</h1>
+      <p class="text-muted mb-4">Click a card to open the demo in a new tab. Descriptions are taken from the included README_USAGE_GUIDE.</p>
+
+      <div class="row g-3">
+        <div class="col-12 col-md-6 col-lg-4">
+          <a href="missile1.html" target="_blank" class="text-decoration-none text-reset">
+            <div class="card card-hover h-100">
+              <div class="card-body">
+                <h5 class="card-title">Missile 1</h5>
+                <p class="desc">Simplest demo with a basic scenario and night mode. Limited controls (angle, velocity, weight). Best crashing animation with no losses.</p>
+              </div>
+              <div class="card-footer bg-transparent border-0 text-end"><small class="text-muted">Open</small></div>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-4">
+          <a href="missile2.html" target="_blank" class="text-decoration-none text-reset">
+            <div class="card card-hover h-100">
+              <div class="card-body">
+                <h5 class="card-title">Missile 2</h5>
+                <p class="desc">Improved visuals with day view and additional control. Different explosion style and a follow camera option.</p>
+              </div>
+              <div class="card-footer bg-transparent border-0 text-end"><small class="text-muted">Open</small></div>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-4">
+          <a href="missile3.html" target="_blank" class="text-decoration-none text-reset">
+            <div class="card card-hover h-100">
+              <div class="card-body">
+                <h5 class="card-title">Missile 3</h5>
+                <p class="desc">Best camera control: three camera modes + keyboard/mouse. Flame path animation, many warhead options (including nukes in simulation), and an advanced target system.</p>
+              </div>
+              <div class="card-footer bg-transparent border-0 text-end"><small class="text-muted">Open</small></div>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-4">
+          <a href="missile4.html" target="_blank" class="text-decoration-none text-reset">
+            <div class="card card-hover h-100">
+              <div class="card-body">
+                <h5 class="card-title">Missile 4</h5>
+                <p class="desc">Good UI but known problematic code. Use for reference or experimentation with caution.</p>
+              </div>
+              <div class="card-footer bg-transparent border-0 text-end"><small class="text-muted">Open</small></div>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-4">
+          <a href="missile5.html" target="_blank" class="text-decoration-none text-reset">
+            <div class="card card-hover h-100">
+              <div class="card-body">
+                <h5 class="card-title">Missile 5</h5>
+                <p class="desc">Adds destruction-on-impact behavior. Some issues exist; useful for studying impact/damage logic.</p>
+              </div>
+              <div class="card-footer bg-transparent border-0 text-end"><small class="text-muted">Open</small></div>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-4">
+          <a href="missile6.html" target="_blank" class="text-decoration-none text-reset">
+            <div class="card card-hover h-100">
+              <div class="card-body">
+                <h5 class="card-title">Missile 6</h5>
+                <p class="desc">Mixed results; camera is known to be unreliable. Works better with high angle and low velocity in city scenarios.</p>
+              </div>
+              <div class="card-footer bg-transparent border-0 text-end"><small class="text-muted">Open</small></div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <hr class="my-4">
+
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Notes</h5>
+          <ul>
+            <li class="mb-1">Files are local — this index uses the included bootstrap.min.css so it runs offline.</li>
+            <li class="mb-1">If a demo reports console errors, open the browser DevTools for diagnostics; these projects are experimental code samples.</li>
+            <li class="mb-1">Source files and additional variants are inside the same folder (see missile-inactive, missile4, missile5, missile6).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container text-center">
+      <p class="mb-1 text-muted small">
+        These demonstrations are technical/educational simulations only. They are not intended to symbolize, encourage, or endorse warfare, violence, or any illegal use. Use responsibly and only for legitimate testing, learning or research.
+      </p>
+      <p class="mb-0"><a href="README_USAGE_GUIDE.txt" target="_blank">View usage guide</a></p>
+    </div>
+  </footer>
+
+  <script src="bootstrap.bundle.min.js"></script>
+</body>
+</html>

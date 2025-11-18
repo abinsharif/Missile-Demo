@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Missile Simulation</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="simulation-container">
+            <div class="control-panel">
+                <div class="panel-section">
+                    <h3>Scenario</h3>
+                    <select id="scenario-select" class="form-control">
+                        <option value="plains">Plains</option>
+                        <option value="mountains">Mountains</option>
+                        <option value="city">City</option>
+                        <option value="sea">Sea</option>
+                    </select>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Missile Configuration</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <select id="missile-type" class="form-control">
+                            <option value="Light">Light (500kg)</option>
+                            <option value="Medium" selected>Medium (1000kg)</option>
+                            <option value="Heavy">Heavy (2000kg)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Warhead</label>
+                        <select id="warhead-type" class="form-control">
+                            <option value="HE" selected>High Explosive</option>
+                            <option value="Frag">Fragmentation</option>
+                            <option value="Inc">Incendiary</option>
+                            <option value="Nuke">Nuclear</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Warhead Size</label>
+                        <select id="warhead-size" class="form-control">
+                            <option value="Small">Small</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="Large">Large</option>
+                            <option value="XL">XL</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Launch Angle: <span id="angle-value">45°</span></label>
+                        <input type="range" id="launch-angle" min="5" max="85" value="45" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Velocity: <span id="velocity-value">100 m/s</span></label>
+                        <input type="range" id="velocity" min="50" max="200" value="100" class="form-control">
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Launch Control</h3>
+                    <div class="launch-info">
+                        <p id="target-info" class="text-secondary">Click on terrain to set target</p>
+                        <p id="launch-platform" class="text-secondary">Launch Platform: Fixed</p>
+                    </div>
+                    <button id="launch-btn" class="btn btn--primary btn--full-width" disabled>
+                        Set Target First
+                    </button>
+                    <button id="reset-btn" class="btn btn--secondary btn--full-width">
+                        Reset Simulation
+                    </button>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Distance</span>
+                            <span id="distance-stat" class="stat-value">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Flight Time</span>
+                            <span id="flight-time-stat" class="stat-value">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Max Height</span>
+                            <span id="max-height-stat" class="stat-value">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Impact Force</span>
+                            <span id="impact-force-stat" class="stat-value">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Blast Radius</span>
+                            <span id="blast-radius-stat" class="stat-value">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Targets Hit</span>
+                            <span id="targets-hit-stat" class="stat-value">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="viewport-container">
+                <div id="loading" class="loading-overlay">
+                    <div class="loading-spinner"></div>
+                    <p>Loading simulation...</p>
+                </div>
+                <canvas id="viewport"></canvas>
+                <div class="viewport-controls">
+                    <button id="camera-reset" class="btn btn--sm btn--outline">Reset Camera</button>
+                    <div class="camera-info">
+                        <span>Mouse: Rotate | Wheel: Zoom | Right-click: Pan</span>
+                    </div>
+                </div>
+                <div id="crosshair" class="crosshair hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

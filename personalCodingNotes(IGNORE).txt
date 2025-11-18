@@ -1,0 +1,10 @@
+Programmer's PERSONAL note:
+
+
+fix the cars: cars should not go on mountains or plains. they would be ONLY in city and on roads, not colliding with buildings. they would go forward, not diagonally or sidewise, it is not possible. make the graphics better with varieties of cars, trucks, buses. Fix the mountain problem : there is so few mountains there, at a weird hard geometrical line-type thing is under the launching site, please remove it.
+
+Add more scenarios: create a sea scenario, where ships, launches and boats would sail on a realistic sea. make them complex, the missile launching place would be a moving battleship. the boats, launches and ships would have good diversity in shape, size, color and movement like real world. Same for cars, bus, etc.
+
+When a missile crashes, it will destroy things within range of it including cities(this depends on it's type, size and weight). Add collision with other things like tree, car or buildings with the missile, so It may burst before reaching ground. It depends on missile weight, warhead type and size. the trajectory and movement of the missile is not realistic. It should face for the angle specified and go to that angle when launched, and crash on the head. for XL missiles, the screen freezes when explodes happen, please fix the problem.
+
+DO NOT REMOVE ANY FUNCTIONALITY OF THE PREVIOUS CODE!

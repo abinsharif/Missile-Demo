@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced 3D Missile Launch & Crash Simulation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .control-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #ff6b35;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            min-width: 250px;
+        }
+        
+        .status-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #4ecdc4;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+        
+        .button {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px 0;
+            width: 100%;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+        }
+        
+        .slider-container {
+            margin: 15px 0;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #333;
+            outline: none;
+            border-radius: 3px;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ff6b35;
+            cursor: pointer;
+        }
+        
+        .status-item {
+            margin: 8px 0;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        .status-value {
+            color: #4ecdc4;
+            font-weight: bold;
+        }
+        
+        .title {
+            text-align: center;
+            color: white;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        
+        .loading-text {
+            color: white;
+            font-size: 24px;
+            text-align: center;
+        }
+        
+        .progress-bar {
+            width: 300px;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b35, #f7931e);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen" class="loading-screen">
+        <div>
+            <div class="loading-text">Initializing Missile Simulation...</div>
+            <div class="progress-bar">
+                <div class="progress" id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div class="control-panel">
+        <div class="title">Missile Controls</div>
+        
+        <div class="slider-container">
+            <label style="color: white;">Launch Angle: <span id="angle-value">90°</span></label>
+            <input type="range" min="5" max="175" value="90" class="slider" id="angle-slider">
+        </div>
+        
+        <div class="slider-container">
+            <label style="color: white;">Launch Power: <span id="power-value">75 m/s</span></label>
+            <input type="range" min="20" max="200" value="75" class="slider" id="power-slider">
+        </div>
+        
+        <div class="slider-container">
+            <label style="color: white;">Missile Weight: <span id="weight-value">1000 kg</span></label>
+            <input type="range" min="500" max="5000" value="1000" class="slider" id="weight-slider">
+        </div>
+        
+        <button class="button" id="launch-btn">LAUNCH MISSILE</button>
+        <button class="button" id="reset-btn">RESET SIMULATION</button>
+        <button class="button" id="auto-btn">AUTO DEMO</button>
+    </div>
+
+    <div class="status-panel">
+        <div class="status-item">Status: <span class="status-value" id="status">READY</span></div>
+        <div class="status-item">Altitude: <span class="status-value" id="altitude">0m</span></div>
+        <div class="status-item">Velocity: <span class="status-value" id="velocity">0 m/s</span></div>
+        <div class="status-item">Distance: <span class="status-value" id="distance">0m</span></div>
+        <div class="status-item">Time: <span class="status-value" id="time">0.0s</span></div>
+        <div class="status-item">Weight: <span class="status-value" id="weight">1000kg</span></div>
+    </div>
+
+    <script>
+        // Main simulation variables
+        let scene, camera, renderer, controls;
+        let missile, ground, smokeParticles = [], explosionParticles = [];
+        let isLaunching = false, isFlying = false, hasCrashed = false;
+        let launchTime = 0, currentTime = 0;
+        let launchAngle = 90, launchPower = 75, missileWeight = 1000;
+        let missilePosition = new THREE.Vector3(0, 2, 0);
+        let missileVelocity = new THREE.Vector3(0, 0, 0);
+        const gravity = 9.81;
+        const airFriction = 0.015;
+        const simulationSpeed = 2.0;
+
+        // Initialize Three.js scene
+        function init() {
+            // Update loading progress
+            document.getElementById('progress-bar').style.width = '50%';
+            
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0c0c0c);
+            scene.fog = new THREE.Fog(0x0c0c0c, 100, 500);
+
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 20, 40);
+            camera.lookAt(0, 0, 0);
+
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Add orbit controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2;
+
+            // Add lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 50, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            // Create environment
+            createGround();
+            createLaunchSite();
+            createEnvironment();
+            
+            // Update loading progress
+            document.getElementById('progress-bar').style.width = '80%';
+            
+            // Create missile
+            createMissile();
+            
+            // Add event listeners
+            setupEventListeners();
+
+            // Update loading progress and hide
+            document.getElementById('progress-bar').style.width = '100%';
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.display = 'none';
+            }, 500);
+
+            // Start animation loop
+            animate();
+        }
+
+        function createGround() {
+            // Main ground
+            const groundGeometry = new THREE.PlaneGeometry(1000, 1000);
+            const groundMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2d4a2d,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            ground.position.y = -0.1;
+            scene.add(ground);
+
+            // Add grid for reference
+            const gridHelper = new THREE.GridHelper(1000, 50, 0x444444, 0x222222);
+            gridHelper.position.y = 0.01;
+            scene.add(gridHelper);
+        }
+
+        function createLaunchSite() {
+            // Launch platform
+            const platformGeometry = new THREE.CylinderGeometry(8, 10, 2, 32);
+            const platformMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x666666,
+                metalness: 0.7,
+                roughness: 0.3
+            });
+            const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+            platform.position.set(0, 1, 0);
+            platform.castShadow = true;
+            platform.receiveShadow = true;
+            scene.add(platform);
+
+            // Launch tower
+            const towerGeometry = new THREE.BoxGeometry(1, 15, 1);
+            const towerMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
+            const tower = new THREE.Mesh(towerGeometry, towerMaterial);
+            tower.position.set(5, 7.5, 0);
+            tower.castShadow = true;
+            scene.add(tower);
+
+            // Support structures
+            for (let i = 0; i < 4; i++) {
+                const supportGeometry = new THREE.CylinderGeometry(0.3, 0.5, 10, 8);
+                const supportMaterial = new THREE.MeshStandardMaterial({ color: 0x777777 });
+                const support = new THREE.Mesh(supportGeometry, supportMaterial);
+                support.position.set(
+                    Math.cos(i * Math.PI / 2) * 6,
+                    5,
+                    Math.sin(i * Math.PI / 2) * 6
+                );
+                support.castShadow = true;
+                scene.add(support);
+            }
+        }
+
+        function createEnvironment() {
+            // Add hills
+            for (let i = 0; i < 15; i++) {
+                const hillSize = 15 + Math.random() * 25;
+                const hillGeometry = new THREE.ConeGeometry(hillSize, hillSize * 1.5, 32);
+                const hillMaterial = new THREE.MeshStandardMaterial({ 
+                    color: new THREE.Color().setHSL(0.3, 0.6, 0.3 + Math.random() * 0.2),
+                    roughness: 0.9,
+                    metalness: 0.1
+                });
+                
+                const hill = new THREE.Mesh(hillGeometry, hillMaterial);
+                hill.position.set(
+                    (Math.random() - 0.5) * 800,
+                    0,
+                    (Math.random() - 0.5) * 800
+                );
+                hill.rotation.y = Math.random() * Math.PI;
+                hill.castShadow = true;
+                hill.receiveShadow = true;
+                scene.add(hill);
+            }
+
+            // Add trees
+            for (let i = 0; i < 100; i++) {
+                const treeX = (Math.random() - 0.5) * 900;
+                const treeZ = (Math.random() - 0.5) * 900;
+                
+                // Only place trees away from launch site
+                if (Math.sqrt(treeX * treeX + treeZ * treeZ) > 50) {
+                    const trunkHeight = 2 + Math.random() * 3;
+                    const trunkGeometry = new THREE.CylinderGeometry(0.3, 0.4, trunkHeight, 8);
+                    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+                    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                    trunk.position.set(treeX, trunkHeight / 2, treeZ);
+                    trunk.castShadow = true;
+                    scene.add(trunk);
+
+                    const leavesSize = 2 + Math.random() * 2;
+                    const leavesGeometry = new THREE.SphereGeometry(leavesSize, 12, 12);
+                    const leavesMaterial = new THREE.MeshStandardMaterial({ 
+                        color: new THREE.Color().setHSL(0.35, 0.8, 0.3 + Math.random() * 0.2)
+                    });
+                    const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+                    leaves.position.set(treeX, trunkHeight + leavesSize * 0.5, treeZ);
+                    leaves.castShadow = true;
+                    scene.add(leaves);
+                }
+            }
+
+            // Add clouds
+            for (let i = 0; i < 25; i++) {
+                const cloudGroup = new THREE.Group();
+                const cloudCount = 3 + Math.floor(Math.random() * 4);
+                
+                for (let j = 0; j < cloudCount; j++) {
+                    const cloudSize = 3 + Math.random() * 4;
+                    const cloudGeometry = new THREE.SphereGeometry(cloudSize, 12, 12);
+                    const cloudMaterial = new THREE.MeshStandardMaterial({ 
+                        color: 0xFFFFFF,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    
+                    const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial);
+                    cloud.position.set(
+                        (Math.random() - 0.5) * 8,
+                        (Math.random() - 0.5) * 3,
+                        (Math.random() - 0.5) * 8
+                    );
+                    cloudGroup.add(cloud);
+                }
+                
+                cloudGroup.position.set(
+                    (Math.random() - 0.5) * 800,
+                    25 + Math.random() * 15,
+                    (Math.random() - 0.5) * 800
+                );
+                scene.add(cloudGroup);
+            }
+        }
+
+        function createMissile() {
+            const group = new THREE.Group();
+            
+            // Missile body (main cylinder)
+            const bodyGeometry = new THREE.CylinderGeometry(0.6, 1.0, 8, 32);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x888888,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.castShadow = true;
+            group.add(body);
+
+            // Missile nose cone
+            const noseGeometry = new THREE.ConeGeometry(0.6, 2.5, 32);
+            const noseMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xff6b35,
+                metalness: 0.9,
+                roughness: 0.1
+            });
+            const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+            nose.position.y = 4.25;
+            nose.castShadow = true;
+            group.add(nose);
+
+            // Fins (4 fins)
+            const finGeometry = new THREE.BoxGeometry(2.0, 0.2, 1.2);
+            const finMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x555555,
+                metalness: 0.7,
+                roughness: 0.3
+            });
+
+            for (let i = 0; i < 4; i++) {
+                const fin = new THREE.Mesh(finGeometry, finMaterial);
+                fin.position.y = -3;
+                fin.rotation.y = (i * Math.PI) / 2;
+                fin.castShadow = true;
+                group.add(fin);
+            }
+
+            // Engine nozzle
+            const nozzleGeometry = new THREE.CylinderGeometry(0.4, 0.8, 1.5, 32);
+            const nozzleMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x444444,
+                metalness: 0.6,
+                roughness: 0.4
+            });
+            const nozzle = new THREE.Mesh(nozzleGeometry, nozzleMaterial);
+            nozzle.position.y = -4.25;
+            nozzle.castShadow = true;
+            group.add(nozzle);
+
+            group.position.copy(missilePosition);
+            scene.add(group);
+            missile = group;
+        }
+
+        function launchMissile() {
+            if (isLaunching || isFlying) return;
+            
+            isLaunching = true;
+            hasCrashed = false;
+            launchTime = currentTime;
+            document.getElementById('status').textContent = 'LAUNCHING';
+            
+            // Calculate initial velocity based on angle and power
+            const angleRad = launchAngle * Math.PI / 180;
+            const power = launchPower;
+            
+            missileVelocity.set(
+                Math.cos(angleRad) * power,
+                Math.sin(angleRad) * power,
+                0
+            );
+
+            // Reset missile position and rotation
+            missilePosition.set(0, 2, 0);
+            missile.position.copy(missilePosition);
+            missile.rotation.set(0, 0, 0);
+
+            // Create launch smoke effect
+            createLaunchSmoke();
+            
+            setTimeout(() => {
+                isLaunching = false;
+                isFlying = true;
+                document.getElementById('status').textContent = 'IN FLIGHT';
+            }, 1000);
+        }
+
+        function createLaunchSmoke() {
+            const smokeGeometry = new THREE.SphereGeometry(0.4, 12, 12);
+            const smokeMaterial = new THREE.MeshBasicMaterial({
+                color: 0x888888,
+                transparent: true,
+                opacity: 0.9
+            });
+
+            for (let i = 0; i < 30; i++) {
+                const particle = new THREE.Mesh(smokeGeometry, smokeMaterial);
+                particle.position.copy(missilePosition);
+                particle.position.y -= 2;
+                particle.scale.set(0.1, 0.1, 0.1);
+                particle.userData.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 3,
+                    Math.random() * 4 + 2,
+                    (Math.random() - 0.5) * 3
+                );
+                particle.userData.life = 3.0;
+                particle.userData.growth = 0.5 + Math.random() * 0.5;
+                scene.add(particle);
+                smokeParticles.push(particle);
+            }
+        }
+
+        function updateMissile(deltaTime) {
+            if (!isFlying) return;
+
+            // Apply gravity (adjusted for weight)
+            const effectiveGravity = gravity * (1 + (missileWeight - 1000) / 5000);
+            missileVelocity.y -= effectiveGravity * deltaTime * simulationSpeed;
+
+            // Apply air friction (velocity-dependent drag)
+            const speed = missileVelocity.length();
+            const dragForce = airFriction * speed * speed;
+            const dragDirection = missileVelocity.clone().normalize().multiplyScalar(-1);
+            missileVelocity.add(dragDirection.multiplyScalar(dragForce * deltaTime));
+
+            // Update position
+            missilePosition.add(missileVelocity.clone().multiplyScalar(deltaTime * simulationSpeed));
+            missile.position.copy(missilePosition);
+            
+            // Update rotation to face velocity direction
+            if (missileVelocity.length() > 0.1) {
+                const direction = missileVelocity.clone().normalize();
+                missile.lookAt(missilePosition.clone().add(direction));
+                
+                // Add slight rotation based on velocity for realism
+                const roll = Math.atan2(direction.y, Math.sqrt(direction.x * direction.x + direction.z * direction.z));
+                missile.rotation.z = roll * 0.5;
+            }
+            
+            // Create flight smoke trail
+            if (Math.random() < 0.3) {
+                createFlightSmoke();
+            }
+            
+            // Check for crash
+            if (missilePosition.y <= 0.5) {
+                crashMissile();
+            }
+            
+            // Update status panel
+            updateStatusPanel();
+        }
+
+        function createFlightSmoke() {
+            const smokeGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+            const smokeMaterial = new THREE.MeshBasicMaterial({
+                color: 0x666666,
+                transparent: true,
+                opacity: 0.7
+            });
+
+            const particle = new THREE.Mesh(smokeGeometry, smokeMaterial);
+            particle.position.copy(missilePosition);
+            particle.scale.set(0.05, 0.05, 0.05);
+            particle.userData.velocity = new THREE.Vector3(
+                (Math.random() - 0.5) * 1,
+                (Math.random() - 0.5) * 0.5,
+                (Math.random() - 0.5) * 1
+            );
+            particle.userData.life = 2.0;
+            particle.userData.growth = 0.3;
+            scene.add(particle);
+            smokeParticles.push(particle);
+        }
+
+        function crashMissile() {
+            isFlying = false;
+            hasCrashed = true;
+            document.getElementById('status').textContent = 'CRASHED';
+            
+            // Create explosion effect
+            createExplosion();
+        }
+
+        function createExplosion() {
+            const explosionSize = Math.max(1, missileWeight / 800); // Size based on weight
+            const particleCount = Math.floor(30 + missileWeight / 50);
+            
+            for (let i = 0; i < particleCount; i++) {
+                const size = 0.5 + Math.random() * explosionSize;
+                const explosionGeometry = new THREE.SphereGeometry(size, 12, 12);
+                
+                // Vary explosion colors
+                const hue = Math.random() * 0.1 + 0.05; // Orange to red hues
+                const explosionMaterial = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color().setHSL(hue, 1, 0.5),
+                    transparent: true,
+                    opacity: 0.9
+                });
+
+                const particle = new THREE.Mesh(explosionGeometry, explosionMaterial);
+                particle.position.copy(missilePosition);
+                
+                // Random initial offset for explosion spread
+                const spread = explosionSize * 2;
+                particle.position.x += (Math.random() - 0.5) * spread;
+                particle.position.y += (Math.random() - 0.5) * spread;
+                particle.position.z += (Math.random() - 0.5) * spread;
+                
+                particle.userData.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 10 * explosionSize,
+                    Math.random() * 8 * explosionSize + 2,
+                    (Math.random() - 0.5) * 10 * explosionSize
+                );
+                particle.userData.life = 1.5 + Math.random() * 1.0;
+                particle.userData.growth = 0.8 + Math.random() * 0.4;
+                particle.userData.color = new THREE.Color().setHSL(hue, 1, 0.5);
+                scene.add(particle);
+                explosionParticles.push(particle);
+            }
+            
+            // Add secondary smoke effect
+            for (let i = 0; i < 20; i++) {
+                const smokeGeometry = new THREE.SphereGeometry(0.8, 8, 8);
+                const smokeMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x333333,
+                    transparent: true,
+                    opacity: 0.8
+                });
+
+                const smoke = new THREE.Mesh(smokeGeometry, smokeMaterial);
+                smoke.position.copy(missilePosition);
+                smoke.scale.set(0.2, 0.2, 0.2);
+                smoke.userData.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 3,
+                    Math.random() * 4 + 1,
+                    (Math.random() - 0.5) * 3
+                );
+                smoke.userData.life = 4.0;
+                smoke.userData.growth = 0.6;
+                scene.add(smoke);
+                explosionParticles.push(smoke);
+            }
+        }
+
+        function updateParticles(deltaTime) {
+            // Update smoke particles
+            for (let i = smokeParticles.length - 1; i >= 0; i--) {
+                const particle = smokeParticles[i];
+                particle.userData.life -= deltaTime;
+                
+                if (particle.userData.life <= 0) {
+                    scene.remove(particle);
+                    smokeParticles.splice(i, 1);
+                    continue;
+                }
+                
+                // Update position and scale
+                particle.position.add(particle.userData.velocity.clone().multiplyScalar(deltaTime));
+                particle.scale.multiplyScalar(1 + particle.userData.growth * deltaTime);
+                
+                // Update opacity
+                const lifeRatio = particle.userData.life / 3.0;
+                particle.material.opacity = lifeRatio * 0.8;
+            }
+            
+            // Update explosion particles
+            for (let i = explosionParticles.length - 1; i >= 0; i--) {
+                const particle = explosionParticles[i];
+                particle.userData.life -= deltaTime;
+                
+                if (particle.userData.life <= 0) {
+                    scene.remove(particle);
+                    explosionParticles.splice(i, 1);
+                    continue;
+                }
+                
+                // Update position with gravity effect
+                particle.userData.velocity.y -= gravity * 0.5 * deltaTime;
+                particle.position.add(particle.userData.velocity.clone().multiplyScalar(deltaTime));
+                
+                // Update scale and opacity
+                const lifeRatio = particle.userData.life / 2.5;
+                particle.scale.multiplyScalar(1 + particle.userData.growth * deltaTime);
+                particle.material.opacity = lifeRatio * 0.9;
+                
+                // Color fade
+                if (particle.userData.color) {
+                    const fadedColor = particle.userData.color.clone();
+                    fadedColor.multiplyScalar(0.9 + lifeRatio * 0.1);
+                    particle.material.color.copy(fadedColor);
+                }
+            }
+        }
+
+        function updateStatusPanel() {
+            const altitude = Math.max(0, missilePosition.y - 0.5);
+            const velocity = missileVelocity.length();
+            const distance = Math.sqrt(missilePosition.x * missilePosition.x + missilePosition.z * missilePosition.z);
+            const time = (currentTime - launchTime) / 1000;
+
+            document.getElementById('altitude').textContent = Math.round(altitude) + 'm';
+            document.getElementById('velocity').textContent = Math.round(velocity) + ' m/s';
+            document.getElementById('distance').textContent = Math.round(distance) + 'm';
+            document.getElementById('time').textContent = time.toFixed(1) + 's';
+            document.getElementById('weight').textContent = missileWeight + 'kg';
+        }
+
+        function resetSimulation() {
+            isLaunching = false;
+            isFlying = false;
+            hasCrashed = false;
+            
+            missilePosition.set(0, 2, 0);
+            missileVelocity.set(0, 0, 0);
+            missile.position.copy(missilePosition);
+            missile.rotation.set(0, 0, 0);
+            
+            // Clear particles
+            smokeParticles.forEach(particle => scene.remove(particle));
+            smokeParticles = [];
+            explosionParticles.forEach(particle => scene.remove(particle));
+            explosionParticles = [];
+            
+            document.getElementById('status').textContent = 'READY';
+            updateStatusPanel();
+        }
+
+        function setupEventListeners() {
+            // Slider events
+            document.getElementById('angle-slider').addEventListener('input', (e) => {
+                launchAngle = parseInt(e.target.value);
+                document.getElementById('angle-value').textContent = launchAngle + '°';
+            });
+
+            document.getElementById('power-slider').addEventListener('input', (e) => {
+                launchPower = parseInt(e.target.value);
+                document.getElementById('power-value').textContent = launchPower + ' m/s';
+            });
+
+            document.getElementById('weight-slider').addEventListener('input', (e) => {
+                missileWeight = parseInt(e.target.value);
+                document.getElementById('weight-value').textContent = missileWeight + ' kg';
+                document.getElementById('weight').textContent = missileWeight + 'kg';
+            });
+
+            // Button events
+            document.getElementById('launch-btn').addEventListener('click', launchMissile);
+            document.getElementById('reset-btn').addEventListener('click', resetSimulation);
+            document.getElementById('auto-btn').addEventListener('click', startAutoDemo);
+
+            // Window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        function startAutoDemo() {
+            resetSimulation();
+            
+            // Randomize parameters for demo
+            launchAngle = 30 + Math.random() * 120;
+            launchPower = 50 + Math.random() * 100;
+            missileWeight = 500 + Math.random() * 4500;
+            
+            document.getElementById('angle-slider').value = launchAngle;
+            document.getElementById('power-slider').value = launchPower;
+            document.getElementById('weight-slider').value = missileWeight;
+            document.getElementById('angle-value').textContent = Math.round(launchAngle) + '°';
+            document.getElementById('power-value').textContent = Math.round(launchPower) + ' m/s';
+            document.getElementById('weight-value').textContent = Math.round(missileWeight) + ' kg';
+            document.getElementById('weight').textContent = Math.round(missileWeight) + 'kg';
+            
+            setTimeout(launchMissile, 1000);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const now = Date.now();
+            const deltaTime = (now - currentTime) / 1000;
+            currentTime = now;
+            
+            controls.update();
+            updateMissile(deltaTime);
+            updateParticles(deltaTime);
+            
+            renderer.render(scene, camera);
+        }
+
+        // Initialize the simulation when window loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
+
